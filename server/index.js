@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -12,6 +13,74 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
+
+// === AUTH ENDPOINTS ===
+
+// Register new user
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, nombre, rol } = req.body;
+    if (!email || !password || !nombre) {
+      return res.status(400).json({ error: 'Email, password y nombre son requeridos' });
+    }
+    const existing = await prisma.usuario.findUnique({ where: { email: email.toLowerCase() } });
+    if (existing) {
+      return res.status(400).json({ error: 'Ya existe un usuario con ese email' });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const usuario = await prisma.usuario.create({
+      data: {
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        nombre,
+        rol: rol || 'administrador',
+      },
+    });
+    res.json({ id: usuario.id, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol });
+  } catch (e) {
+    console.error('Register error', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email y password son requeridos' });
+    }
+    const usuario = await prisma.usuario.findUnique({ where: { email: email.toLowerCase() } });
+    if (!usuario) {
+      return res.status(401).json({ error: 'Usuario no encontrado' });
+    }
+    if (!usuario.activo) {
+      return res.status(401).json({ error: 'Usuario inactivo' });
+    }
+    const valid = await bcrypt.compare(password, usuario.password);
+    if (!valid) {
+      return res.status(401).json({ error: 'Contraseña incorrecta' });
+    }
+    res.json({ id: usuario.id, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol });
+  } catch (e) {
+    console.error('Login error', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Get all users (for admin)
+app.get('/api/usuarios', async (req, res) => {
+  try {
+    const usuarios = await prisma.usuario.findMany({
+      select: { id: true, email: true, nombre: true, rol: true, activo: true, createdAt: true },
+    });
+    res.json(usuarios);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ===
 
 app.get('/api/platos', async (req, res) => {
   const platos = await prisma.plato.findMany();

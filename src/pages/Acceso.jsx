@@ -5,26 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ChefHat, LogIn, UserPlus } from "lucide-react";
+import { ChefHat, LogIn, UserPlus, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
-// Utilidades locales de almacenamiento
-const LS_KEY_USERS = "st_sushi_Usuario";
+// URL del API - usa variable de entorno o fallback relativo
+const API_URL = import.meta.env.VITE_API_URL || "/api";
+
 const LS_KEY_SESSION = "empleado_sesion";
-
-function readUsers() {
-  try {
-    const raw = localStorage.getItem(LS_KEY_USERS);
-    const arr = JSON.parse(raw || "[]");
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeUsers(users) {
-  localStorage.setItem(LS_KEY_USERS, JSON.stringify(users || []));
-}
 
 function redirectByRole(navigate, rol) {
   const destinos = {
@@ -41,15 +28,18 @@ export default function Acceso() {
   const navigate = useNavigate();
 
   // Estado general
-  const [users, setUsers] = useState(() => readUsers());
-  const [mode, setMode] = useState(() => (readUsers().length === 0 ? "register" : "login"));
+  const [mode, setMode] = useState("login"); // login | register
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Form login
   const [emailLogin, setEmailLogin] = useState("");
+  const [passwordLogin, setPasswordLogin] = useState("");
 
   // Form register
   const [nombreReg, setNombreReg] = useState("");
   const [emailReg, setEmailReg] = useState("");
+  const [passwordReg, setPasswordReg] = useState("");
   const [rolReg, setRolReg] = useState("administrador");
 
   // Si ya hay sesión, redirigir
@@ -65,66 +55,85 @@ export default function Acceso() {
     }
   }, [navigate]);
 
-  // Cambiar modo automáticamente si se crean usuarios
-  useEffect(() => {
-    if (users.length > 0 && mode === "register") {
-      setMode("login");
-    }
-  }, [users, mode]);
-
-  const onRegister = (e) => {
+  const onRegister = async (e) => {
     e.preventDefault();
+    setLoading(true);
     const nombre = (nombreReg || "").trim();
     const email = (emailReg || "").trim().toLowerCase();
+    const password = passwordReg || "";
     const rol = (rolReg || "administrador").toLowerCase();
 
-    if (!nombre || !email) {
-      toast.error("Completa nombre y correo");
+    if (!nombre || !email || !password) {
+      toast.error("Completa nombre, correo y contraseña");
+      setLoading(false);
       return;
     }
 
-    const exists = users.some((u) => (u.email || "").toLowerCase() === email);
-    if (exists) {
-      toast.error("Ya existe un usuario con ese correo");
+    if (password.length < 4) {
+      toast.error("La contraseña debe tener al menos 4 caracteres");
+      setLoading(false);
       return;
     }
 
-    const nuevo = {
-      id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36),
-      nombre,
-      email,
-      rol,
-      activo: true,
-      created_date: new Date().toISOString(),
-    };
-    const updated = [nuevo, ...users];
-    writeUsers(updated);
-    setUsers(updated);
+    try {
+      const res = await fetch(`${API_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, nombre, rol }),
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        toast.error(data.error || "Error al registrar");
+        setLoading(false);
+        return;
+      }
 
-    localStorage.setItem(LS_KEY_SESSION, JSON.stringify(nuevo));
-    toast.success("Usuario registrado y sesión iniciada");
-    redirectByRole(navigate, rol);
+      // Login automático tras registro
+      localStorage.setItem(LS_KEY_SESSION, JSON.stringify(data));
+      toast.success("Usuario registrado correctamente");
+      redirectByRole(navigate, data.rol);
+    } catch (err) {
+      console.error("Register error:", err);
+      toast.error("Error de conexión");
+      setLoading(false);
+    }
   };
 
-  const onLogin = (e) => {
+  const onLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
     const email = (emailLogin || "").trim().toLowerCase();
-    if (!email) {
-      toast.error("Ingresa tu correo");
+    const password = passwordLogin || "";
+
+    if (!email || !password) {
+      toast.error("Ingresa tu correo y contraseña");
+      setLoading(false);
       return;
     }
-    const user = users.find((u) => (u.email || "").toLowerCase() === email);
-    if (!user) {
-      toast.error("Usuario no encontrado");
-      return;
+
+    try {
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        toast.error(data.error || "Credenciales incorrectas");
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem(LS_KEY_SESSION, JSON.stringify(data));
+      toast.success(`Bienvenido/a ${data.nombre}`);
+      redirectByRole(navigate, data.rol);
+    } catch (err) {
+      console.error("Login error:", err);
+      toast.error("Error de conexión");
+      setLoading(false);
     }
-    if (user.activo === false) {
-      toast.error("Usuario inactivo");
-      return;
-    }
-    localStorage.setItem(LS_KEY_SESSION, JSON.stringify(user));
-    toast.success(`Bienvenido/a ${user.nombre}`);
-    redirectByRole(navigate, user.rol);
   };
 
   const Initials = useMemo(() => {
@@ -154,48 +163,140 @@ export default function Acceso() {
           {mode === "register" ? (
             <form onSubmit={onRegister} className="space-y-5">
               <div className="space-y-1 text-center">
-                <h2 className="text-xl font-bold">Registro de Administrador</h2>
-                <p className="text-sm text-slate-600">Crea el primer usuario administrador</p>
+                <h2 className="text-xl font-bold">Registro de Usuario</h2>
+                <p className="text-sm text-slate-600">Crea tu cuenta para acceder al sistema</p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="nombre">Nombre completo</Label>
-                <Input id="nombre" value={nombreReg} onChange={(e) => setNombreReg(e.target.value)} placeholder="Ej: Juan Pérez" />
+                <Input 
+                  id="nombre" 
+                  value={nombreReg} 
+                  onChange={(e) => setNombreReg(e.target.value)} 
+                  placeholder="Ej: Juan Pérez" 
+                />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="email">Correo</Label>
-                <Input id="email" type="email" value={emailReg} onChange={(e) => setEmailReg(e.target.value)} placeholder="admin@ejemplo.com" />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  value={emailReg} 
+                  onChange={(e) => setEmailReg(e.target.value)} 
+                  placeholder="admin@ejemplo.com" 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <div className="relative">
+                  <Input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"}
+                    value={passwordReg} 
+                    onChange={(e) => setPasswordReg(e.target.value)} 
+                    placeholder="Mínimo 4 caracteres" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label>Rol</Label>
-                <Input value={rolReg} disabled className="font-semibold" />
+                <select 
+                  value={rolReg}
+                  onChange={(e) => setRolReg(e.target.value)}
+                  className="w-full h-10 px-3 border rounded-md bg-white"
+                >
+                  <option value="administrador">Administrador</option>
+                  <option value="cajero">Cajero</option>
+                  <option value="mesero">Mesero</option>
+                  <option value="cocinero">Cocinero</option>
+                </select>
               </div>
 
-              <Button type="submit" className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-base font-semibold">
-                <UserPlus className="w-5 h-5 mr-2" /> Registrar y entrar
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-base font-semibold"
+              >
+                {loading ? "Registrando..." : <><UserPlus className="w-5 h-5 mr-2" /> Registrar y entrar</>}
               </Button>
+
+              <p className="text-center text-sm text-slate-600">
+                ¿Ya tienes cuenta?{" "}
+                <button 
+                  type="button"
+                  onClick={() => { setMode("login"); setShowPassword(false); }}
+                  className="text-amber-600 hover:underline font-medium"
+                >
+                  Iniciar sesión
+                </button>
+              </p>
             </form>
           ) : (
             <form onSubmit={onLogin} className="space-y-5">
               <div className="space-y-1 text-center">
                 <h2 className="text-xl font-bold">Iniciar sesión</h2>
-                <p className="text-sm text-slate-600">Ingresa tu correo registrado</p>
+                <p className="text-sm text-slate-600">Ingresa tus credenciales</p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="email-login">Correo</Label>
-                <Input id="email-login" type="email" value={emailLogin} onChange={(e) => setEmailLogin(e.target.value)} placeholder="correo@ejemplo.com" />
+                <Input 
+                  id="email-login" 
+                  type="email" 
+                  value={emailLogin} 
+                  onChange={(e) => setEmailLogin(e.target.value)} 
+                  placeholder="correo@ejemplo.com" 
+                />
               </div>
 
-              <Button type="submit" className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-base font-semibold">
-                <LogIn className="w-5 h-5 mr-2" /> Ingresar
+              <div className="space-y-2">
+                <Label htmlFor="password-login">Contraseña</Label>
+                <div className="relative">
+                  <Input 
+                    id="password-login" 
+                    type={showPassword ? "text" : "password"}
+                    value={passwordLogin} 
+                    onChange={(e) => setPasswordLogin(e.target.value)} 
+                    placeholder="Tu contraseña" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-base font-semibold"
+              >
+                {loading ? "Ingresando..." : <><LogIn className="w-5 h-5 mr-2" /> Ingresar</>}
               </Button>
 
-              {users.length === 0 && (
-                <p className="text-xs text-slate-500 text-center">No hay usuarios. Cambiando a registro...</p>
-              )}
+              <p className="text-center text-sm text-slate-600">
+                ¿No tienes cuenta?{" "}
+                <button 
+                  type="button"
+                  onClick={() => { setMode("register"); setShowPassword(false); }}
+                  className="text-amber-600 hover:underline font-medium"
+                >
+                  Regístrate
+                </button>
+              </p>
             </form>
           )}
 
