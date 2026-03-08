@@ -1,0 +1,59 @@
+{
+  "name": "RecetaPrimaria",
+  "type": "object",
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre de la receta primaria"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n de la receta primaria"
+    },
+    "unidad_medida": {
+      "type": "string",
+      "enum": [
+        "kg",
+        "g",
+        "l",
+        "ml",
+        "unidad",
+        "porcion"
+      ],
+      "description": "Unidad de medida del resultado"
+    },
+    "cantidad_resultante": {
+      "type": "number",
+      "description": "Cantidad que se obtiene de esta receta",
+      "default": 1
+    },
+    "costo_total": {
+      "type": "number",
+      "description": "Costo total de la receta primaria",
+      "default": 0
+    },
+    "costo_por_unidad": {
+      "type": "number",
+      "description": "Costo por unidad de medida",
+      "default": 0
+    },
+    "tiempo_preparacion": {
+      "type": "number",
+      "description": "Tiempo de preparaci\u00f3n en minutos"
+    },
+    "instrucciones": {
+      "type": "string",
+      "description": "Instrucciones de preparaci\u00f3n"
+    },
+    "activa": {
+      "type": "boolean",
+      "description": "Si la receta est\u00e1 activa",
+      "default": true
+    }
+  },
+  "required": [
+    "nombre",
+    "unidad_medida",
+    "cantidad_resultante"
+  ]
+}

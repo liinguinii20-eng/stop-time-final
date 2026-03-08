@@ -1,0 +1,53 @@
+{
+  "name": "Empleado",
+  "type": "object",
+  "properties": {
+    "nombre_completo": {
+      "type": "string",
+      "description": "Nombre completo del empleado"
+    },
+    "usuario": {
+      "type": "string",
+      "description": "Nombre de usuario \u00fanico para login"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email del empleado"
+    },
+    "rol": {
+      "type": "string",
+      "enum": [
+        "mesero",
+        "cocinero",
+        "cajero",
+        "administrador",
+        "visualizador"
+      ],
+      "description": "Rol del empleado en el sistema"
+    },
+    "activo": {
+      "type": "boolean",
+      "description": "Si el empleado est\u00e1 activo",
+      "default": true
+    },
+    "telefono": {
+      "type": "string",
+      "description": "Tel\u00e9fono de contacto"
+    },
+    "fecha_contratacion": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de contrataci\u00f3n"
+    },
+    "ultimo_acceso": {
+      "type": "string",
+      "format": "date-time",
+      "description": "\u00daltima vez que accedi\u00f3 al sistema"
+    }
+  },
+  "required": [
+    "nombre_completo",
+    "usuario",
+    "rol"
+  ]
+}

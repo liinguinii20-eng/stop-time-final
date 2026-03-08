@@ -1,0 +1,57 @@
+{
+  "name": "HistorialCostoIngrediente",
+  "type": "object",
+  "properties": {
+    "ingrediente_id": {
+      "type": "string",
+      "description": "ID del ingrediente"
+    },
+    "ingrediente_nombre": {
+      "type": "string",
+      "description": "Nombre del ingrediente (denormalizado)"
+    },
+    "costo_anterior": {
+      "type": "number",
+      "description": "Costo anterior del ingrediente"
+    },
+    "costo_nuevo": {
+      "type": "number",
+      "description": "Nuevo costo del ingrediente"
+    },
+    "fecha_cambio": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora del cambio"
+    },
+    "empleado_nombre": {
+      "type": "string",
+      "description": "Empleado que realiz\u00f3 el cambio"
+    },
+    "motivo": {
+      "type": "string",
+      "enum": [
+        "compra_nueva",
+        "ajuste",
+        "promocion",
+        "cambio_proveedor",
+        "otro"
+      ],
+      "description": "Motivo del cambio de costo"
+    },
+    "proveedor": {
+      "type": "string",
+      "description": "Proveedor del nuevo costo"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales sobre el cambio"
+    }
+  },
+  "required": [
+    "ingrediente_id",
+    "costo_anterior",
+    "costo_nuevo",
+    "fecha_cambio",
+    "motivo"
+  ]
+}

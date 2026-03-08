@@ -1,0 +1,42 @@
+{
+  "name": "LogLimpieza",
+  "type": "object",
+  "properties": {
+    "fecha_ejecucion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de la ejecuci\u00f3n de limpieza"
+    },
+    "registros_eliminados": {
+      "type": "number",
+      "description": "Cantidad de registros eliminados",
+      "default": 0
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "automatica",
+        "manual"
+      ],
+      "default": "manual",
+      "description": "Tipo de limpieza ejecutada"
+    },
+    "exitosa": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si la limpieza fue exitosa"
+    },
+    "error": {
+      "type": "string",
+      "description": "Mensaje de error si fall\u00f3"
+    },
+    "detalles": {
+      "type": "string",
+      "description": "Detalles adicionales de la limpieza"
+    }
+  },
+  "required": [
+    "fecha_ejecucion",
+    "tipo"
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "name": "DetalleComanda",
+  "type": "object",
+  "properties": {
+    "comanda_id": {
+      "type": "string",
+      "description": "ID de la comanda"
+    },
+    "plato_id": {
+      "type": "string",
+      "description": "ID del plato"
+    },
+    "plato_nombre": {
+      "type": "string",
+      "description": "Nombre del plato (denormalizado)"
+    },
+    "cantidad": {
+      "type": "number",
+      "description": "Cantidad del plato"
+    },
+    "precio_unitario": {
+      "type": "number",
+      "description": "Precio unitario al momento de agregar"
+    },
+    "subtotal": {
+      "type": "number",
+      "description": "Subtotal del item"
+    },
+    "estado_plato": {
+      "type": "string",
+      "enum": [
+        "pendiente",
+        "en_preparacion",
+        "listo",
+        "entregado"
+      ],
+      "default": "pendiente",
+      "description": "Estado de preparaci\u00f3n del plato"
+    },
+    "notas_plato": {
+      "type": "string",
+      "description": "Notas especiales del plato"
+    },
+    "variante": {
+      "type": "string",
+      "description": "Variante del plato (ej: 6 piezas, 12 piezas)",
+      "default": null
+    }
+  },
+  "required": [
+    "comanda_id",
+    "plato_id",
+    "plato_nombre",
+    "cantidad",
+    "precio_unitario",
+    "subtotal"
+  ]
+}

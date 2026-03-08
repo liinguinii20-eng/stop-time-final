@@ -1,0 +1,61 @@
+{
+  "name": "Venta",
+  "type": "object",
+  "properties": {
+    "fecha_hora": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de la venta"
+    },
+    "total_venta": {
+      "type": "number",
+      "description": "Total de la venta en USD"
+    },
+    "metodo_pago": {
+      "type": "string",
+      "enum": [
+        "efectivo_usd",
+        "tarjeta_bs",
+        "pago_movil_bs",
+        "binance_usd",
+        "zinli_usd",
+        "nequi_cop",
+        "paypal_usd",
+        "zelle_usd",
+        "mixto",
+        "cuentas_por_cobrar"
+      ],
+      "description": "M\u00e9todo de pago espec\u00edfico"
+    },
+    "costo_total": {
+      "type": "number",
+      "description": "Costo total de los platos vendidos",
+      "default": 0
+    },
+    "ganancia": {
+      "type": "number",
+      "description": "Ganancia neta de la venta",
+      "default": 0
+    },
+    "total_cop": {
+      "type": "number",
+      "description": "Total en Pesos Colombianos",
+      "default": 0
+    },
+    "total_ves": {
+      "type": "number",
+      "description": "Total en Bol\u00edvares",
+      "default": 0
+    },
+    "tasa_bs_aplicada": {
+      "type": "number",
+      "description": "Tasa de Bol\u00edvar aplicada",
+      "default": 0
+    }
+  },
+  "required": [
+    "fecha_hora",
+    "total_venta",
+    "metodo_pago"
+  ]
+}

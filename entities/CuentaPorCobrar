@@ -1,0 +1,65 @@
+{
+  "name": "CuentaPorCobrar",
+  "type": "object",
+  "properties": {
+    "cliente_nombre": {
+      "type": "string",
+      "description": "Nombre del cliente"
+    },
+    "cliente_telefono": {
+      "type": "string",
+      "description": "Tel\u00e9fono del cliente"
+    },
+    "monto_total": {
+      "type": "number",
+      "description": "Monto total de la cuenta"
+    },
+    "monto_pendiente": {
+      "type": "number",
+      "description": "Monto pendiente por pagar"
+    },
+    "comanda_id": {
+      "type": "string",
+      "description": "ID de la comanda asociada"
+    },
+    "comanda_numero": {
+      "type": "string",
+      "description": "N\u00famero de comanda (denormalizado)"
+    },
+    "fecha_creacion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de creaci\u00f3n de la cuenta"
+    },
+    "fecha_vencimiento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha l\u00edmite de pago"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "pendiente",
+        "pagada_parcial",
+        "pagada"
+      ],
+      "default": "pendiente",
+      "description": "Estado de la cuenta"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    },
+    "venta_id": {
+      "type": "string",
+      "description": "ID de la venta generada al crear la cuenta"
+    }
+  },
+  "required": [
+    "cliente_nombre",
+    "monto_total",
+    "monto_pendiente",
+    "fecha_creacion",
+    "estado"
+  ]
+}

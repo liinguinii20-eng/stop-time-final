@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Venta {
+  id              String         @id @default(uuid())
+  fecha_hora      DateTime       @default(now())
+  total_venta     Float
+  metodo_pago     String?
+  total_cop       Float?
+  total_ves       Float?
+  monto_original  Float?
+  moneda_original String?
+  detalles        DetalleVenta[]
+  createdAt       DateTime       @default(now())
+}
+
+model DetalleVenta {
+  id             String  @id @default(uuid())
+  ventaId        String
+  venta          Venta   @relation(fields: [ventaId], references: [id])
+  platoId        String?
+  platoNombre    String?
+  cantidad       Float
+  precioUnitario Float
+  subtotal       Float
+}
+
+model Ingrediente {
+  id                  String  @id @default(uuid())
+  nombre              String
+  cantidad_disponible Float   @default(0)
+  cantidad_minima     Float   @default(0)
+  unidad_medida       String?
+  unidad_receta       String?
+  factor_conversion   Float   @default(1)
+  costo_por_unidad    Float?
+  createdAt           DateTime @default(now())
+}
+
+model Plato {
+  id        String  @id @default(uuid())
+  nombre    String
+  precio    Float
+  activo    Boolean @default(true)
+  recetas   Receta[]
+  createdAt DateTime @default(now())
+}
+
+model Receta {
+  id                String  @id @default(uuid())
+  platoId           String
+  plato             Plato   @relation(fields: [platoId], references: [id])
+  ingredienteId     String
+  ingredienteNombre String?
+  cantidad_requerida Float
+}
+
+model Comanda {
+  id             String  @id @default(uuid())
+  numero_comanda String
+  mesa_numero    String?
+  mesero_nombre  String?
+  fecha_apertura DateTime @default(now())
+  fecha_cierre   DateTime?
+  estado         String   @default("abierta")
+  total_comanda  Float    @default(0)
+  detalles       DetalleComanda[]
+}
+
+model DetalleComanda {
+  id          String  @id @default(uuid())
+  comandaId   String
+  comanda     Comanda @relation(fields: [comandaId], references: [id])
+  platoId     String?
+  platoNombre String?
+  cantidad    Float
+  precio      Float
+}
+
+model Adelanto {
+  id         String   @id @default(uuid())
+  empleadoId String?
+  empleado   String?
+  monto      Float
+  fecha      DateTime @default(now())
+  descripcion String?
+  createdAt  DateTime @default(now())
+}
+
+model AlertaStock {
+  id                String   @id @default(uuid())
+  ingredienteId     String?
+  ingredienteNombre String?
+  cantidad_actual   Float?
+  cantidad_minima   Float?
+  creadoEn          DateTime @default(now())
+}
+
+model CategoriaGasto {
+  id          String   @id @default(uuid())
+  nombre      String
+  descripcion String?
+  createdAt   DateTime @default(now())
+}
+
+model DetalleRecetaPrimaria {
+  id                String  @id @default(uuid())
+  recetaPrimariaId  String
+  recetaPrimaria    RecetaPrimaria @relation(fields: [recetaPrimariaId], references: [id])
+  ingredienteId     String?
+  cantidad          Float
+}
+
+model DetalleRecetaSecundaria {
+  id                    String  @id @default(uuid())
+  recetaSecundariaId    String
+  recetaSecundaria      RecetaSecundaria @relation(fields: [recetaSecundariaId], references: [id])
+  ingredienteId         String?
+  cantidad              Float
+}
+
+model SesionUsuario {
+  id         String   @id @default(uuid())
+  usuarioId  String?
+  usuario    Usuario? @relation(fields: [usuarioId], references: [id])
+  token      String?
+  creadoEn   DateTime @default(now())
+  expiracion DateTime?
+}
+
+model Compra {
+  id        String   @id @default(uuid())
+  proveedor String?
+  total     Float
+  fecha     DateTime @default(now())
+}
+
+model CuentaPorCobrar {
+  id            String   @id @default(uuid())
+  clienteNombre String?
+  monto         Float
+  estado        String   @default("pendiente")
+  vencimiento   DateTime?
+}
+
+model Empleado {
+  id        String   @id @default(uuid())
+  nombre    String
+  rol       String?
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Gasto {
+  id            String   @id @default(uuid())
+  categoriaId   String?
+  categoriaNombre String?
+  monto         Float
+  descripcion   String?
+  fecha         DateTime @default(now())
+}
+
+model HistorialCostoIngrediente {
+  id             String   @id @default(uuid())
+  ingredienteId  String
+  costoAnterior  Float?
+  costoNuevo     Float?
+  fecha          DateTime @default(now())
+}
+
+model LogLimpieza {
+  id          String   @id @default(uuid())
+  ubicacion   String?
+  realizadoPor String?
+  fecha       DateTime @default(now())
+  notas       String?
+}
+
+model PagoCuentaPorCobrar {
+  id        String   @id @default(uuid())
+  cuentaId  String
+  monto     Float
+  fecha     DateTime @default(now())
+  metodo    String?
+}
+
+model PagoMixto {
+  id      String   @id @default(uuid())
+  ventaId String?
+  monto   Float
+  metodo  String?
+  fecha   DateTime @default(now())
+}
+
+model RecetaPrimaria {
+  id      String  @id @default(uuid())
+  nombre  String
+  detalles DetalleRecetaPrimaria[]
+}
+
+model RecetaSecundaria {
+  id       String  @id @default(uuid())
+  nombre   String
+  detalles DetalleRecetaSecundaria[]
+}
+
+model TasaCambio {
+  id             String   @id @default(uuid())
+  monedaOrigen   String
+  monedaDestino  String
+  tasa           Float
+  fecha          DateTime @default(now())
+}
+
+model Usuario {
+  id        String   @id @default(uuid())
+  usuario   String   @unique
+  clave     String
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}

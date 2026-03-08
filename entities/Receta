@@ -1,0 +1,36 @@
+{
+  "name": "Receta",
+  "type": "object",
+  "properties": {
+    "plato_id": {
+      "type": "string",
+      "description": "ID del plato"
+    },
+    "plato_nombre": {
+      "type": "string",
+      "description": "Nombre del plato (denormalizado para b\u00fasquedas)"
+    },
+    "ingrediente_id": {
+      "type": "string",
+      "description": "ID del ingrediente"
+    },
+    "ingrediente_nombre": {
+      "type": "string",
+      "description": "Nombre del ingrediente (denormalizado)"
+    },
+    "cantidad_requerida": {
+      "type": "number",
+      "description": "Cantidad requerida del ingrediente"
+    },
+    "costo_ingrediente": {
+      "type": "number",
+      "description": "Costo calculado del ingrediente en la receta",
+      "default": 0
+    }
+  },
+  "required": [
+    "plato_id",
+    "ingrediente_id",
+    "cantidad_requerida"
+  ]
+}

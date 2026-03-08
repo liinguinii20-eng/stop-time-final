@@ -1,0 +1,36 @@
+{
+  "name": "DetalleRecetaPrimaria",
+  "type": "object",
+  "properties": {
+    "receta_primaria_id": {
+      "type": "string",
+      "description": "ID de la receta primaria"
+    },
+    "ingrediente_id": {
+      "type": "string",
+      "description": "ID del ingrediente"
+    },
+    "ingrediente_nombre": {
+      "type": "string",
+      "description": "Nombre del ingrediente (denormalizado)"
+    },
+    "cantidad_requerida": {
+      "type": "number",
+      "description": "Cantidad requerida del ingrediente"
+    },
+    "unidad_medida": {
+      "type": "string",
+      "description": "Unidad de medida del ingrediente"
+    },
+    "costo_ingrediente": {
+      "type": "number",
+      "description": "Costo del ingrediente en esta receta",
+      "default": 0
+    }
+  },
+  "required": [
+    "receta_primaria_id",
+    "ingrediente_id",
+    "cantidad_requerida"
+  ]
+}

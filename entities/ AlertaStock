@@ -1,0 +1,39 @@
+{
+  "name": "AlertaStock",
+  "type": "object",
+  "properties": {
+    "ingrediente_id": {
+      "type": "string",
+      "description": "ID del ingrediente"
+    },
+    "nombre_ingrediente": {
+      "type": "string",
+      "description": "Nombre del ingrediente"
+    },
+    "cantidad_actual": {
+      "type": "number",
+      "description": "Cantidad actual en stock"
+    },
+    "cantidad_minima": {
+      "type": "number",
+      "description": "Cantidad m\u00ednima configurada"
+    },
+    "fecha_alerta": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de la alerta"
+    },
+    "resuelta": {
+      "type": "boolean",
+      "description": "Si la alerta fue resuelta",
+      "default": false
+    }
+  },
+  "required": [
+    "ingrediente_id",
+    "nombre_ingrediente",
+    "cantidad_actual",
+    "cantidad_minima",
+    "fecha_alerta"
+  ]
+}

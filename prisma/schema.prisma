@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Venta {
+  id              String         @id @default(uuid())
+  fecha_hora      DateTime       @default(now())
+  total_venta     Float
+  metodo_pago     String?
+  total_cop       Float?
+  total_ves       Float?
+  monto_original  Float?
+  moneda_original String?
+  detalles        DetalleVenta[]
+  createdAt       DateTime       @default(now())
+}
+
+model DetalleVenta {
+  id             String  @id @default(uuid())
+  ventaId        String
+  venta          Venta   @relation(fields: [ventaId], references: [id])
+  platoId        String?
+  platoNombre    String?
+  cantidad       Float
+  precioUnitario Float
+  subtotal       Float
+}
+
+model Ingrediente {
+  id                  String  @id @default(uuid())
+  nombre              String
+  cantidad_disponible Float   @default(0)
+  cantidad_minima     Float   @default(0)
+  unidad_medida       String?
+  unidad_receta       String?
+  factor_conversion   Float   @default(1)
+  costo_por_unidad    Float?
+  createdAt           DateTime @default(now())
+}
+
+model Plato {
+  id        String  @id @default(uuid())
+  nombre    String
+  precio    Float
+  activo    Boolean @default(true)
+  recetas   Receta[]
+  createdAt DateTime @default(now())
+}
+
+model Receta {
+  id                String  @id @default(uuid())
+  platoId           String
+  plato             Plato   @relation(fields: [platoId], references: [id])
+  ingredienteId     String
+  ingredienteNombre String?
+  cantidad_requerida Float
+}
+
+model Comanda {
+  id             String  @id @default(uuid())
+  numero_comanda String
+  mesa_numero    String?
+  mesero_nombre  String?
+  fecha_apertura DateTime @default(now())
+  fecha_cierre   DateTime?
+  estado         String   @default("abierta")
+  total_comanda  Float    @default(0)
+}

@@ -1,0 +1,53 @@
+{
+  "name": "PagoCuentaPorCobrar",
+  "type": "object",
+  "properties": {
+    "cuenta_id": {
+      "type": "string",
+      "description": "ID de la cuenta por cobrar"
+    },
+    "monto_pagado": {
+      "type": "number",
+      "description": "Monto del pago"
+    },
+    "metodo_pago": {
+      "type": "string",
+      "enum": [
+        "efectivo_usd",
+        "tarjeta_bs",
+        "pago_movil_bs",
+        "binance_usd",
+        "zinli_usd",
+        "nequi_cop",
+        "paypal_usd",
+        "zelle_usd",
+        "mixto"
+      ],
+      "description": "M\u00e9todo de pago utilizado"
+    },
+    "fecha_pago": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora del pago"
+    },
+    "tasa_bs_aplicada": {
+      "type": "number",
+      "description": "Tasa de bol\u00edvar aplicada al momento del pago",
+      "default": 0
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas del pago"
+    },
+    "empleado_nombre": {
+      "type": "string",
+      "description": "Empleado que registr\u00f3 el pago"
+    }
+  },
+  "required": [
+    "cuenta_id",
+    "monto_pagado",
+    "metodo_pago",
+    "fecha_pago"
+  ]
+}

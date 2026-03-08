@@ -1,0 +1,110 @@
+{
+  "name": "Gasto",
+  "type": "object",
+  "properties": {
+    "fecha_gasto": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora del gasto"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n del gasto"
+    },
+    "categoria": {
+      "type": "string",
+      "enum": [
+        "Alquiler",
+        "Servicios B\u00e1sicos",
+        "N\u00f3mina",
+        "Marketing",
+        "Mantenimiento",
+        "Impuestos",
+        "Compras Ingredientes",
+        "Otros"
+      ],
+      "description": "Categor\u00eda del gasto"
+    },
+    "monto": {
+      "type": "number",
+      "description": "Monto del gasto en USD"
+    },
+    "metodo_pago": {
+      "type": "string",
+      "enum": [
+        "efectivo_usd",
+        "tarjeta_bs",
+        "pago_movil_bs",
+        "binance_usd",
+        "zinli_usd",
+        "nequi_cop",
+        "paypal_usd",
+        "zelle_usd",
+        "cuentas_por_cobrar",
+        "otro"
+      ],
+      "default": "efectivo_usd",
+      "description": "M\u00e9todo de pago utilizado para el gasto"
+    },
+    "moneda_original": {
+      "type": "string",
+      "enum": [
+        "USD",
+        "VES",
+        "COP"
+      ],
+      "default": "USD",
+      "description": "Moneda en la que se realiz\u00f3 el gasto originalmente"
+    },
+    "monto_original": {
+      "type": "number",
+      "description": "Monto en la moneda original"
+    },
+    "tasa_cambio": {
+      "type": "number",
+      "description": "Tasa de cambio aplicada",
+      "default": 1
+    },
+    "comprobante": {
+      "type": "string",
+      "description": "N\u00famero de factura o referencia"
+    },
+    "recurrente": {
+      "type": "boolean",
+      "description": "Si es un gasto fijo mensual",
+      "default": false
+    },
+    "fecha_vencimiento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de vencimiento para gastos programados"
+    },
+    "compra_id": {
+      "type": "string",
+      "description": "ID de la compra relacionada (si aplica)"
+    },
+    "tipo_gasto": {
+      "type": "string",
+      "enum": [
+        "operativo",
+        "compra_ingredientes",
+        "nomina",
+        "servicios"
+      ],
+      "default": "operativo",
+      "description": "Tipo de gasto para clasificaci\u00f3n"
+    },
+    "afecta_caja": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el gasto afecta el reporte de flujo de caja del m\u00e9todo"
+    }
+  },
+  "required": [
+    "fecha_gasto",
+    "descripcion",
+    "categoria",
+    "monto",
+    "metodo_pago"
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "name": "Comanda",
+  "type": "object",
+  "properties": {
+    "numero_comanda": {
+      "type": "string",
+      "description": "N\u00famero \u00fanico de comanda (C-001, C-002...)"
+    },
+    "mesa_numero": {
+      "type": "string",
+      "description": "N\u00famero o nombre de la mesa"
+    },
+    "mesero_nombre": {
+      "type": "string",
+      "description": "Nombre del mesero que atiende"
+    },
+    "fecha_apertura": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de apertura"
+    },
+    "fecha_cierre": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de cierre"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "abierta",
+        "cerrada",
+        "pagada"
+      ],
+      "default": "abierta",
+      "description": "Estado de la comanda"
+    },
+    "total_comanda": {
+      "type": "number",
+      "description": "Total de la comanda en USD",
+      "default": 0
+    },
+    "total_cop": {
+      "type": "number",
+      "description": "Total en Pesos Colombianos",
+      "default": 0
+    },
+    "total_ves": {
+      "type": "number",
+      "description": "Total en Bol\u00edvares",
+      "default": 0
+    },
+    "total_ves_con_iva": {
+      "type": "number",
+      "description": "Total en Bol\u00edvares con IVA 16%",
+      "default": 0
+    },
+    "tasa_bs_aplicada": {
+      "type": "number",
+      "description": "Tasa de Bol\u00edvar aplicada al momento del pago",
+      "default": 0
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas generales de la comanda"
+    }
+  },
+  "required": [
+    "numero_comanda",
+    "mesa_numero",
+    "mesero_nombre",
+    "fecha_apertura",
+    "total_comanda"
+  ]
+}

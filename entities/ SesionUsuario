@@ -1,0 +1,38 @@
+{
+  "name": "SesionUsuario",
+  "type": "object",
+  "properties": {
+    "empleado_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "empleado_nombre": {
+      "type": "string",
+      "description": "Nombre del empleado (denormalizado)"
+    },
+    "fecha_inicio": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de inicio de sesi\u00f3n"
+    },
+    "fecha_fin": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de cierre de sesi\u00f3n"
+    },
+    "dispositivo": {
+      "type": "string",
+      "description": "Informaci\u00f3n del dispositivo"
+    },
+    "activa": {
+      "type": "boolean",
+      "description": "Si la sesi\u00f3n est\u00e1 activa",
+      "default": true
+    }
+  },
+  "required": [
+    "empleado_id",
+    "empleado_nombre",
+    "fecha_inicio"
+  ]
+}

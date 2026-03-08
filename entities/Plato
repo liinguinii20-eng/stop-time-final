@@ -1,0 +1,67 @@
+{
+  "name": "Plato",
+  "type": "object",
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre del plato"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n del plato"
+    },
+    "precio": {
+      "type": "number",
+      "description": "Precio de venta standard"
+    },
+    "costo_total": {
+      "type": "number",
+      "description": "Costo total de ingredientes",
+      "default": 0
+    },
+    "precio_sugerido": {
+      "type": "number",
+      "description": "Precio sugerido con 70% margen",
+      "default": 0
+    },
+    "categoria": {
+      "type": "string",
+      "enum": [
+        "Entradas",
+        "Bebidas",
+        "Stop Premium",
+        "Ramen",
+        "Recetas Virales",
+        "Men\u00fa Infantil",
+        "Adicionales",
+        "Rolls Tempura",
+        "Rolls Frescos"
+      ],
+      "description": "Categor\u00eda del plato"
+    },
+    "activo": {
+      "type": "boolean",
+      "description": "Si el plato est\u00e1 activo en el men\u00fa",
+      "default": true
+    },
+    "tiene_piezas": {
+      "type": "boolean",
+      "description": "Si el plato tiene opci\u00f3n de 6 o 12 piezas",
+      "default": false
+    },
+    "precio_6": {
+      "type": "number",
+      "description": "Precio para 6 piezas",
+      "default": 0
+    },
+    "precio_12": {
+      "type": "number",
+      "description": "Precio para 12 piezas",
+      "default": 0
+    }
+  },
+  "required": [
+    "nombre",
+    "categoria"
+  ]
+}

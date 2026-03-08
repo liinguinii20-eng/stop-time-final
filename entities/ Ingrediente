@@ -1,0 +1,55 @@
+{
+  "name": "Ingrediente",
+  "type": "object",
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre del ingrediente"
+    },
+    "unidad_medida": {
+      "type": "string",
+      "enum": [
+        "kg",
+        "g",
+        "l",
+        "ml",
+        "unidad",
+        "paquete"
+      ],
+      "description": "Unidad de medida del inventario"
+    },
+    "unidad_receta": {
+      "type": "string",
+      "description": "Unidad usada en recetas (ej: unidad, porci\u00f3n, ml)",
+      "default": "unidad"
+    },
+    "factor_conversion": {
+      "type": "number",
+      "description": "Factor para convertir de unidad_receta a unidad_medida (ej: 1 unidad = 0.05 litros)",
+      "default": 1
+    },
+    "costo_por_unidad": {
+      "type": "number",
+      "description": "Costo actual por unidad de medida"
+    },
+    "cantidad_disponible": {
+      "type": "number",
+      "description": "Cantidad disponible en inventario"
+    },
+    "cantidad_minima": {
+      "type": "number",
+      "description": "Cantidad m\u00ednima antes de alerta"
+    },
+    "proveedor": {
+      "type": "string",
+      "description": "Proveedor actual del ingrediente"
+    }
+  },
+  "required": [
+    "nombre",
+    "unidad_medida",
+    "costo_por_unidad",
+    "cantidad_disponible",
+    "cantidad_minima"
+  ]
+}

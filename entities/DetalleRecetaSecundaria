@@ -1,0 +1,45 @@
+{
+  "name": "DetalleRecetaSecundaria",
+  "type": "object",
+  "properties": {
+    "receta_secundaria_id": {
+      "type": "string",
+      "description": "ID de la receta secundaria"
+    },
+    "elemento_id": {
+      "type": "string",
+      "description": "ID del ingrediente o receta primaria"
+    },
+    "elemento_nombre": {
+      "type": "string",
+      "description": "Nombre del elemento (denormalizado)"
+    },
+    "tipo_elemento": {
+      "type": "string",
+      "enum": [
+        "ingrediente",
+        "receta_primaria"
+      ],
+      "description": "Tipo de elemento usado"
+    },
+    "cantidad_requerida": {
+      "type": "number",
+      "description": "Cantidad requerida del elemento"
+    },
+    "unidad_medida": {
+      "type": "string",
+      "description": "Unidad de medida del elemento"
+    },
+    "costo_elemento": {
+      "type": "number",
+      "description": "Costo del elemento en esta receta",
+      "default": 0
+    }
+  },
+  "required": [
+    "receta_secundaria_id",
+    "elemento_id",
+    "tipo_elemento",
+    "cantidad_requerida"
+  ]
+}

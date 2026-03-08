@@ -1,0 +1,82 @@
+{
+  "name": "Compra",
+  "type": "object",
+  "properties": {
+    "ingrediente_id": {
+      "type": "string",
+      "description": "ID del ingrediente comprado"
+    },
+    "ingrediente_nombre": {
+      "type": "string",
+      "description": "Nombre del ingrediente (denormalizado)"
+    },
+    "cantidad": {
+      "type": "number",
+      "description": "Cantidad comprada"
+    },
+    "unidad_medida": {
+      "type": "string",
+      "description": "Unidad de medida del ingrediente"
+    },
+    "costo_unitario": {
+      "type": "number",
+      "description": "Costo por unidad en esta compra"
+    },
+    "costo_total": {
+      "type": "number",
+      "description": "Costo total de la compra"
+    },
+    "proveedor": {
+      "type": "string",
+      "description": "Proveedor de la compra"
+    },
+    "numero_factura": {
+      "type": "string",
+      "description": "N\u00famero de factura o recibo"
+    },
+    "fecha_compra": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de la compra"
+    },
+    "fecha_entrega_estimada": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha estimada de entrega"
+    },
+    "tipo_compra": {
+      "type": "string",
+      "enum": [
+        "nuevo_ingrediente",
+        "reposicion"
+      ],
+      "default": "reposicion",
+      "description": "Tipo de compra"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "pendiente",
+        "recibida",
+        "cancelada"
+      ],
+      "default": "recibida",
+      "description": "Estado de la compra"
+    },
+    "empleado_nombre": {
+      "type": "string",
+      "description": "Empleado que registr\u00f3 la compra"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    }
+  },
+  "required": [
+    "ingrediente_id",
+    "cantidad",
+    "costo_unitario",
+    "costo_total",
+    "fecha_compra"
+  ]
+}

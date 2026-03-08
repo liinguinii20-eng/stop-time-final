@@ -1,0 +1,53 @@
+{
+  "name": "PagoMixto",
+  "type": "object",
+  "properties": {
+    "venta_id": {
+      "type": "string",
+      "description": "ID de la venta"
+    },
+    "metodo_pago": {
+      "type": "string",
+      "enum": [
+        "efectivo_usd",
+        "tarjeta_bs",
+        "pago_movil_bs",
+        "binance_usd",
+        "zinli_usd",
+        "nequi_cop",
+        "paypal_usd",
+        "zelle_usd",
+        "cuentas_por_cobrar"
+      ],
+      "description": "M\u00e9todo de pago espec\u00edfico"
+    },
+    "monto_usd": {
+      "type": "number",
+      "description": "Monto en USD"
+    },
+    "monto_original": {
+      "type": "number",
+      "description": "Monto en moneda original"
+    },
+    "moneda": {
+      "type": "string",
+      "enum": [
+        "usd",
+        "cop",
+        "ves"
+      ],
+      "description": "Moneda del pago"
+    },
+    "tasa_cambio_aplicada": {
+      "type": "number",
+      "description": "Tasa de cambio usada",
+      "default": 1
+    }
+  },
+  "required": [
+    "venta_id",
+    "metodo_pago",
+    "monto_usd",
+    "moneda"
+  ]
+}
