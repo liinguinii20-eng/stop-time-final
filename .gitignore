@@ -5,3 +5,4 @@ dist/
 *.db-journal
 prisma/dev.db
 prisma/migrations/dev/
+tmp/
