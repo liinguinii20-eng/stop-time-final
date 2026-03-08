@@ -80,6 +80,38 @@ app.get('/api/usuarios', async (req, res) => {
   }
 });
 
+// Update user (admin only)
+app.put('/api/usuarios', async (req, res) => {
+  try {
+    const { id, email, password, nombre, rol, activo } = req.body;
+    if (!id || !email || !nombre) {
+      return res.status(400).json({ error: 'ID, email y nombre son requeridos' });
+    }
+    
+    const updateData = {
+      email: email.toLowerCase(),
+      nombre,
+      rol: rol || 'mesero',
+      activo: activo !== false,
+    };
+    
+    // Only update password if provided
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+    
+    const usuario = await prisma.usuario.update({
+      where: { id },
+      data: updateData,
+    });
+    
+    res.json({ id: usuario.id, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol });
+  } catch (e) {
+    console.error('Update user error', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ===
 
 app.get('/api/platos', async (req, res) => {
