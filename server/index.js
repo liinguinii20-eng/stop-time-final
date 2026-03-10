@@ -9,6 +9,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Usar PostgreSQL en producción ( Railway ) o SQLite local
 const prisma = new PrismaClient();
+
+// Verificar conexión a la base de datos al iniciar
+prisma.$connect()
+  .then(() => {
+    console.log('✅ Conectado a la base de datos PostgreSQL');
+  })
+  .catch((err) => {
+    console.error('❌ Error conectando a la base de datos:', err.message);
+  });
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -51,6 +61,10 @@ app.post('/api/auth/login', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y password son requeridos' });
     }
+    
+    // Log para debug
+    console.log('Intentando login con:', email);
+    
     const usuario = await prisma.usuario.findUnique({ where: { email: email.toLowerCase() } });
     if (!usuario) {
       return res.status(401).json({ error: 'Usuario no encontrado' });
@@ -64,8 +78,8 @@ app.post('/api/auth/login', async (req, res) => {
     }
     res.json({ id: usuario.id, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol });
   } catch (e) {
-    console.error('Login error', e);
-    res.status(500).json({ error: e.message });
+    console.error('Login error detallado:', e);
+    res.status(500).json({ error: 'Error del servidor: ' + e.message });
   }
 });
 
