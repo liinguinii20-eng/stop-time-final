@@ -915,7 +915,7 @@ export default function ReportesDiarios() {
                           <tfoot>
                             <tr className="bg-green-50 font-bold">
                               <td colSpan={2} className="p-3">TOTAL</td>
-                              <td className="p-3 text-right text-green-700">${reporte.ventas.total.toFixed(2)}</td>
+                              <td className="p-3 text-right text-green-700">${reporte.ventas.total_divisas.toFixed(2)}</td>
                               <td className="p-3 text-right"></td>
                               <td className="p-3 text-right"></td>
                             </tr>
