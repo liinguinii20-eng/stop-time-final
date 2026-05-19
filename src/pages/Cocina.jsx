@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChefHat, Clock, CheckCircle, Utensils, User, Wifi, WifiOff, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
-
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 // ─── Sonido de alerta ────────────────────────────────────────────────
 const ALERT_SOUND_BASE64 =
   'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDGH0fPTgjMGHm7A7+OZSA0PVqzn77BdGQc+ltryxnMlBSyAzfLYiTcIGWi77eeeTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQQxh9Hz04I0Bh5uwO/jmUgND1as5++wXRkHPpbZ8sVzJQUsgM3y2Ik3CBlou+3nnk0QDFCn4/C2YxwGOJLX8sx5LAUkd8fw3ZBACBResnbznkwQDU+m4++1Xx0GOZTa88l4LAYmeMjvAjRdYWZ7lNLYwmIbAzJpvvHL';
@@ -94,6 +94,7 @@ function useCocinaSSE(onEvent) {
 export default function Cocina() {
   const queryClient = useQueryClient();
   const [comandasAgrupadas, setComandasAgrupadas] = useState([]);
+  const [comandasListasAgrupadas, setComandasListasAgrupadas] = useState([]);
   const [sonidoActivo, setSonidoActivo] = useState(true);
   const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
   const [flashId, setFlashId] = useState(null); // Para animación de nueva comanda
@@ -137,6 +138,28 @@ export default function Cocina() {
     );
 
     setComandasAgrupadas(comandasArray);
+
+    const listas = detalles.filter(d => d.estado_plato === 'listo');
+    const agrupadasListas = listas.reduce((acc, detalle) => {
+      const comanda = comandas.find(c => c.id === detalle.comanda_id);
+      if (!comanda) return acc;
+
+      if (!acc[detalle.comanda_id]) {
+        acc[detalle.comanda_id] = {
+          ...comanda,
+          platos: []
+        };
+      }
+      acc[detalle.comanda_id].platos.push(detalle);
+      return acc;
+    }, {});
+
+    const comandasListasArray = Object.values(agrupadasListas).sort((a, b) => 
+      new Date(b.fecha_apertura) - new Date(a.fecha_apertura)
+    );
+
+    setComandasListasAgrupadas(comandasListasArray);
+
   }, [detalles, comandas]);
 
   // 4. Reproducir sonido de alerta
@@ -278,109 +301,185 @@ export default function Cocina() {
           )}
         </div>
 
-        {/* Grid de Comandas */}
-        {comandasAgrupadas.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {comandasAgrupadas.map((comanda) => (
-              <Card 
-                key={comanda.id} 
-                className={`bg-white border-none shadow-2xl flex flex-col overflow-hidden ring-1 ring-black/5 transition-all duration-700 ${
-                  flashId === comanda.id 
-                    ? 'ring-4 ring-orange-400 scale-[1.02] shadow-orange-500/30 shadow-[0_0_40px_rgba(249,115,22,0.3)]' 
-                    : ''
-                }`}
-              >
-                
-                {/* Flash de nueva comanda */}
-                {flashId === comanda.id && (
-                  <div className="bg-gradient-to-r from-orange-500 to-amber-400 text-white text-center py-1.5 text-xs font-black uppercase tracking-widest animate-pulse">
-                    🔔 ¡NUEVA! — RECIÉN LLEGADA
-                  </div>
-                )}
+        {/* Contenedor de Tabs */}
+        <Tabs defaultValue="pendientes" className="space-y-6">
+          <TabsList className="bg-slate-900 border border-slate-800 p-1 rounded-xl flex max-w-sm mx-auto">
+            <TabsTrigger value="pendientes" className="flex-1 rounded-lg data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:font-black text-slate-400">
+              En Preparación ({comandasAgrupadas.length})
+            </TabsTrigger>
+            <TabsTrigger value="listas" className="flex-1 rounded-lg data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=active]:font-black text-slate-400">
+              Listas ({comandasListasAgrupadas.length})
+            </TabsTrigger>
+          </TabsList>
 
-                {/* Cabecera de Tarjeta */}
-                <div className="bg-slate-800 p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="bg-orange-500 text-white px-3 py-1 rounded-lg font-black text-xl">
-                        #{comanda.numero_comanda}
-                      </div>
-                      <div className="text-white">
-                        <p className="text-[10px] text-slate-400 font-bold leading-none">MESA</p>
-                        <p className="text-lg font-black leading-none">{comanda.mesa_numero}</p>
-                      </div>
-                    </div>
-                    <TiempoEspera fechaApertura={comanda.fecha_apertura} />
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-400 text-xs">
-                    <User className="w-3 h-3" />
-                    <span className="truncate uppercase font-medium">{comanda.mesero_nombre}</span>
-                  </div>
-                </div>
-
-                {/* Lista de Platos */}
-                <CardContent className="p-0 flex-1 bg-slate-50">
-                  <div className="divide-y divide-slate-200">
-                    {comanda.platos.map((plato) => (
-                      <div key={plato.id} className="p-4 flex gap-4 items-start">
-                        <div className="bg-slate-200 text-slate-700 w-8 h-8 rounded-lg flex items-center justify-center font-black shrink-0">
-                          {plato.cantidad}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-slate-900 leading-tight">{plato.plato_nombre}</h3>
-                          {plato.variante && (
-                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">
-                              {plato.variante}
-                            </span>
-                          )}
-                          {plato.notas_plato && (
-                            <div className="mt-2 bg-amber-100/50 p-2 rounded border-l-2 border-amber-400">
-                              <p className="text-xs text-amber-800 font-medium italic">"{plato.notas_plato}"</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-
-                {/* Botón de Acción Finalizado */}
-                <div className="p-4 bg-white mt-auto">
-                  <Button
-                    onClick={() => handleDespachar(comanda.platos)}
-                    className="w-full h-16 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-[0_4px_0_rgb(22,101,52)] active:shadow-none active:translate-y-1 transition-all flex flex-col items-center justify-center gap-0"
+          {/* TAB PENDIENTES */}
+          <TabsContent value="pendientes" className="mt-6">
+            {comandasAgrupadas.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {comandasAgrupadas.map((comanda) => (
+                  <Card 
+                    key={comanda.id} 
+                    className={`bg-white border-none shadow-2xl flex flex-col overflow-hidden ring-1 ring-black/5 transition-all duration-700 ${
+                      flashId === comanda.id 
+                        ? 'ring-4 ring-orange-400 scale-[1.02] shadow-orange-500/30 shadow-[0_0_40px_rgba(249,115,22,0.3)]' 
+                        : ''
+                    }`}
                   >
-                    <span className="text-[10px] font-black opacity-80 uppercase tracking-tighter">Completar Pedido</span>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-6 h-6" />
-                      <span className="text-xl font-black italic">¡TODO LISTO!</span>
+                    
+                    {/* Flash de nueva comanda */}
+                    {flashId === comanda.id && (
+                      <div className="bg-gradient-to-r from-orange-500 to-amber-400 text-white text-center py-1.5 text-xs font-black uppercase tracking-widest animate-pulse">
+                        🔔 ¡NUEVA! — RECIÉN LLEGADA
+                      </div>
+                    )}
+
+                    {/* Cabecera de Tarjeta */}
+                    <div className="bg-slate-800 p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-orange-500 text-white px-3 py-1 rounded-lg font-black text-xl">
+                            #{comanda.numero_comanda}
+                          </div>
+                          <div className="text-white">
+                            <p className="text-[10px] text-slate-400 font-bold leading-none">MESA</p>
+                            <p className="text-lg font-black leading-none">{comanda.mesa_numero}</p>
+                          </div>
+                        </div>
+                        <TiempoEspera fechaApertura={comanda.fecha_apertura} />
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-400 text-xs">
+                        <User className="w-3 h-3" />
+                        <span className="truncate uppercase font-medium">{comanda.mesero_nombre}</span>
+                      </div>
                     </div>
-                  </Button>
+
+                    {/* Lista de Platos */}
+                    <CardContent className="p-0 flex-1 bg-slate-50">
+                      <div className="divide-y divide-slate-200">
+                        {comanda.platos.map((plato) => (
+                          <div key={plato.id} className="p-4 flex gap-4 items-start">
+                            <div className="bg-slate-200 text-slate-700 w-8 h-8 rounded-lg flex items-center justify-center font-black shrink-0">
+                              {plato.cantidad}
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-bold text-slate-900 leading-tight">{plato.plato_nombre}</h3>
+                              {plato.variante && (
+                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">
+                                  {plato.variante}
+                                </span>
+                              )}
+                              {plato.notas_plato && (
+                                <div className="mt-2 bg-amber-100/50 p-2 rounded border-l-2 border-amber-400">
+                                  <p className="text-xs text-amber-800 font-medium italic">"{plato.notas_plato}"</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+
+                    {/* Botón de Acción Finalizado */}
+                    <div className="p-4 bg-white mt-auto">
+                      <Button
+                        onClick={() => handleDespachar(comanda.platos)}
+                        className="w-full h-16 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-[0_4px_0_rgb(22,101,52)] active:shadow-none active:translate-y-1 transition-all flex flex-col items-center justify-center gap-0"
+                      >
+                        <span className="text-[10px] font-black opacity-80 uppercase tracking-tighter">Completar Pedido</span>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-6 h-6" />
+                          <span className="text-xl font-black italic">¡TODO LISTO!</span>
+                        </div>
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-slate-900/50 border-2 border-dashed border-slate-800 rounded-3xl p-20 text-center">
+                <div className="max-w-xs mx-auto space-y-4">
+                  <div className="bg-slate-800 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
+                    <Utensils className="w-10 h-10 text-slate-600" />
+                  </div>
+                  <h2 className="text-2xl font-black text-slate-400 uppercase italic">Cocina en Silencio</h2>
+                  <p className="text-slate-600 text-sm">Los nuevos pedidos de los meseros aparecerán aquí automáticamente en tiempo real.</p>
+                  
+                  {/* Indicador de estado SSE */}
+                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold ${
+                    sseConnected 
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                      : 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse'
+                  }`}>
+                    <div className={`w-2 h-2 rounded-full ${sseConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                    {sseConnected ? 'Escuchando pedidos en vivo' : 'Reconectando...'}
+                  </div>
                 </div>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-slate-900/50 border-2 border-dashed border-slate-800 rounded-3xl p-20 text-center">
-            <div className="max-w-xs mx-auto space-y-4">
-              <div className="bg-slate-800 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
-                <Utensils className="w-10 h-10 text-slate-600" />
               </div>
-              <h2 className="text-2xl font-black text-slate-400 uppercase italic">Cocina en Silencio</h2>
-              <p className="text-slate-600 text-sm">Los nuevos pedidos de los meseros aparecerán aquí automáticamente en tiempo real.</p>
-              
-              {/* Indicador de estado SSE */}
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold ${
-                sseConnected 
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                  : 'bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse'
-              }`}>
-                <div className={`w-2 h-2 rounded-full ${sseConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
-                {sseConnected ? 'Escuchando pedidos en vivo' : 'Reconectando...'}
+            )}
+          </TabsContent>
+
+          {/* TAB LISTAS */}
+          <TabsContent value="listas" className="mt-6">
+            {comandasListasAgrupadas.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {comandasListasAgrupadas.map((comanda) => (
+                  <Card key={comanda.id} className="bg-white border-none shadow-xl flex flex-col overflow-hidden ring-1 ring-black/5 opacity-80 hover:opacity-100 transition-opacity">
+                    {/* Cabecera de Tarjeta */}
+                    <div className="bg-slate-800 p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-green-600 text-white px-3 py-1 rounded-lg font-black text-xl">
+                            #{comanda.numero_comanda}
+                          </div>
+                          <div className="text-white">
+                            <p className="text-[10px] text-slate-400 font-bold leading-none">MESA</p>
+                            <p className="text-lg font-black leading-none">{comanda.mesa_numero}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-400 text-xs mt-2">
+                        <User className="w-3 h-3" />
+                        <span className="truncate uppercase font-medium">{comanda.mesero_nombre}</span>
+                      </div>
+                    </div>
+
+                    {/* Lista de Platos */}
+                    <CardContent className="p-0 flex-1 bg-slate-50">
+                      <div className="divide-y divide-slate-200">
+                        {comanda.platos.map((plato) => (
+                          <div key={plato.id} className="p-4 flex gap-4 items-center">
+                            <div className="bg-slate-200 text-slate-700 w-8 h-8 rounded-lg flex items-center justify-center font-black shrink-0">
+                              {plato.cantidad}
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-bold text-slate-900 leading-tight line-through opacity-70">{plato.plato_nombre}</h3>
+                              {plato.variante && (
+                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase mt-1 inline-block">
+                                  {plato.variante}
+                                </span>
+                              )}
+                            </div>
+                            <CheckCircle className="w-6 h-6 text-green-500 shrink-0" />
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            </div>
-          </div>
-        )}
+            ) : (
+              <div className="bg-slate-900/50 border-2 border-dashed border-slate-800 rounded-3xl p-20 text-center">
+                <div className="max-w-xs mx-auto space-y-4">
+                  <div className="bg-slate-800 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle className="w-10 h-10 text-slate-600" />
+                  </div>
+                  <h2 className="text-2xl font-black text-slate-400 uppercase italic">Sin comandas listas</h2>
+                  <p className="text-slate-600 text-sm">Las comandas que despaches aparecerán en esta lista.</p>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
