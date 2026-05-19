@@ -4,8 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, Calendar } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { DollarSign, TrendingUp, Clock, Save, Loader2, Sparkles, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -39,37 +39,21 @@ export default function GestionTasas() {
     queryFn: () => base44.entities.TasaCambio.list('-created_date', 30),
   });
 
-
-
   const actualizarTasaCOPMutation = useMutation({
     mutationFn: async (tasaCOP) => {
       const hoy = format(new Date(), 'yyyy-MM-dd');
       const tasaCOPNum = parseFloat(tasaCOP);
       
-      // Obtener la tasa USD actual o usar la guardada
       const tasaUSDActual = parseFloat(localStorage.getItem('tasa_usd_final')) || 0;
       
-      // Buscar si ya existe una tasa activa para hoy
-      const tasaHoyActiva = tasas.find(t => t.fecha === hoy && t.activa);
-      
-      if (tasaHoyActiva) {
-        // Actualizar la tasa existente
-        await base44.entities.TasaCambio.update(tasaHoyActiva.id, {
-          tasa_cop_usd: tasaCOPNum,
-          empleado_nombre: empleadoActual?.nombre_completo || "Sistema"
-        });
-      } else {
-        // Crear nueva tasa en BD
-        await base44.entities.TasaCambio.create({
-          fecha: hoy,
-          tasa_bs_usd: tasaUSDActual,
-          tasa_cop_usd: tasaCOPNum,
-          activa: true,
-          empleado_nombre: empleadoActual?.nombre_completo || "Sistema"
-        });
-      }
+      await base44.entities.TasaCambio.create({
+        fecha: hoy,
+        tasa_bs_usd: tasaUSDActual,
+        tasa_cop_usd: tasaCOPNum,
+        activa: true,
+        empleado_nombre: empleadoActual?.nombre_completo || "Sistema"
+      });
 
-      // Guardar en localStorage
       localStorage.setItem('tasa_cop_actual', tasaCOP);
       window.dispatchEvent(new CustomEvent('tasasActualizadas'));
 
@@ -77,7 +61,7 @@ export default function GestionTasas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasas-cambio'] });
-      toast.success("✅ Tasa COP actualizada en BD y sincronizada");
+      toast.success("✅ Tasa COP publicada con éxito");
     },
     onError: () => {
       toast.error("❌ Error al actualizar la tasa COP");
@@ -89,7 +73,6 @@ export default function GestionTasas() {
       toast.error("Por favor ingresa una tasa COP válida");
       return;
     }
-    
     actualizarTasaCOPMutation.mutate(tasaCOP);
   };
 
@@ -99,27 +82,14 @@ export default function GestionTasas() {
       const tasaFinal = parseFloat(tasaBase) * 1.16;
       const tasaCOPActual = parseFloat(localStorage.getItem('tasa_cop_actual') || '4000');
       
-      // Buscar si ya existe una tasa activa para hoy
-      const tasaHoyActiva = tasas.find(t => t.fecha === hoy && t.activa);
-      
-      if (tasaHoyActiva) {
-        // Actualizar la tasa existente
-        await base44.entities.TasaCambio.update(tasaHoyActiva.id, {
-          tasa_bs_usd: tasaFinal,
-          empleado_nombre: empleadoActual?.nombre_completo || "Sistema"
-        });
-      } else {
-        // Crear nueva tasa en BD
-        await base44.entities.TasaCambio.create({
-          fecha: hoy,
-          tasa_bs_usd: tasaFinal,
-          tasa_cop_usd: tasaCOPActual,
-          activa: true,
-          empleado_nombre: empleadoActual?.nombre_completo || "Sistema"
-        });
-      }
+      await base44.entities.TasaCambio.create({
+        fecha: hoy,
+        tasa_bs_usd: tasaFinal,
+        tasa_cop_usd: tasaCOPActual,
+        activa: true,
+        empleado_nombre: empleadoActual?.nombre_completo || "Sistema"
+      });
 
-      // Guardar en localStorage
       localStorage.setItem('tasa_usd_base', tasaBase);
       localStorage.setItem('tasa_usd_final', tasaFinal.toString());
       window.dispatchEvent(new CustomEvent('tasasActualizadas'));
@@ -128,7 +98,7 @@ export default function GestionTasas() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasas-cambio'] });
-      toast.success("✅ Tasa USD actualizada en BD y sincronizada");
+      toast.success("✅ Tasa USD publicada con éxito");
     },
     onError: () => {
       toast.error("❌ Error al actualizar la tasa USD");
@@ -144,176 +114,237 @@ export default function GestionTasas() {
   };
 
   return (
-    <div className="p-4 md:p-8 min-h-screen">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col items-start gap-2">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
-            <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
-            <span className="leading-tight">Gestión de Tasas de Cambio</span>
-          </h1>
-          <p className="text-sm sm:text-base text-gray-500">
-            Administra las tasas diarias de conversión
-          </p>
+    <div className="p-4 md:p-8 min-h-screen bg-slate-50/50 font-sans">
+      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        
+        {/* Header Elegante */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="space-y-1">
+            <h1 className="text-4xl font-black text-slate-900 flex items-center gap-4 tracking-tight">
+              <div className="p-3 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-200">
+                <ArrowRightLeft className="w-8 h-8 text-white" />
+              </div>
+              Mercado de Divisas
+            </h1>
+            <p className="text-slate-500 font-medium ml-1">Sincronización global y control de tasas en tiempo real</p>
+          </div>
         </div>
 
-        {/* Configuración Tasa USD */}
-        <Card className="shadow-lg border-none bg-gradient-to-br from-emerald-50 to-green-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-emerald-600" />
-              Configuración Global Tasa USD (Bolívares)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="tasaUSDBase">Tasa Base de Mercado (Bs/USD)</Label>
-              <Input
-                id="tasaUSDBase"
-                type="number"
-                step="0.01"
-                min="0"
-                value={tasaUSDBase}
-                onChange={(e) => setTasaUSDBase(e.target.value)}
-                placeholder="36.50"
-                className="text-lg font-semibold"
-              />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* Card USD */}
+          <Card className="border-0 shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden group bg-white hover:shadow-2xl hover:shadow-emerald-200/40 transition-all duration-500 relative">
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-all duration-500 pointer-events-none">
+              <DollarSign className="w-32 h-32" />
             </div>
-            
-            {tasaUSDBase && parseFloat(tasaUSDBase) > 0 && (
-              <div className="bg-emerald-600 text-white p-4 rounded-xl shadow-inner">
-                <p className="text-xs opacity-90 mb-1 font-bold uppercase tracking-wider">Tasa Aplicada con +16%</p>
-                <p className="text-3xl font-black">
-                  Bs {(parseFloat(tasaUSDBase) * 1.16).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            )}
-
-            {tasaUSDBase && parseFloat(tasaUSDBase) > 0 && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                <p className="text-sm font-semibold text-emerald-900 mb-2">Vista Previa:</p>
-                <div className="space-y-1 text-sm text-emerald-800">
-                  <p>$1 USD = Bs {(parseFloat(tasaUSDBase) * 1.16).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
-                  <p>$10 USD = Bs {(parseFloat(tasaUSDBase) * 1.16 * 10).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
-                  <p>$100 USD = Bs {(parseFloat(tasaUSDBase) * 1.16 * 100).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</p>
+            <CardContent className="p-8 space-y-8 relative z-10">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-800">Tasa USD (Bolívares)</h2>
                 </div>
+                <p className="text-slate-500 text-sm pl-13">Tasa oficial BCV o monitor</p>
               </div>
-            )}
 
-            <Button
-              onClick={handleGuardarTasaUSD}
-              disabled={actualizarTasaUSDMutation.isPending}
-              className="w-full bg-emerald-600 hover:bg-emerald-700"
-            >
-              {actualizarTasaUSDMutation.isPending ? "Guardando..." : "Guardar y Sincronizar Tasa USD"}
-            </Button>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <p className="text-xs text-amber-900">
-                🔄 Se aplicará automáticamente el recargo del 16% y se sincronizará en tiempo real
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Configuración Tasa COP */}
-        <Card className="shadow-lg border-none bg-gradient-to-br from-blue-50 to-indigo-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-              Configuración Global Tasa COP
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="tasaCOP">Tasa Pesos Colombianos por USD</Label>
-              <Input
-                id="tasaCOP"
-                type="number"
-                step="1"
-                min="0"
-                value={tasaCOP}
-                onChange={(e) => setTasaCOP(e.target.value)}
-                placeholder="4000"
-                className="text-lg font-semibold"
-              />
-            </div>
-            
-            {tasaCOP && parseFloat(tasaCOP) > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm font-semibold text-blue-900 mb-2">Vista Previa:</p>
-                <div className="space-y-1 text-sm text-blue-800">
-                  <p>$1 USD = ₡ {parseFloat(tasaCOP).toLocaleString('es-CO')}</p>
-                  <p>$10 USD = ₡ {(parseFloat(tasaCOP) * 10).toLocaleString('es-CO')}</p>
-                  <p>$100 USD = ₡ {(parseFloat(tasaCOP) * 100).toLocaleString('es-CO')}</p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">Tasa Base del Mercado</Label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">Bs</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={tasaUSDBase}
+                      onChange={(e) => setTasaUSDBase(e.target.value)}
+                      placeholder="36.50"
+                      className="pl-12 h-16 text-2xl font-black bg-slate-50 border-none rounded-2xl focus-visible:ring-emerald-500 focus-visible:ring-offset-2 transition-all"
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
 
-            <Button
-              onClick={handleGuardarTasaCOP}
-              disabled={actualizarTasaCOPMutation.isPending}
-              className="w-full bg-blue-600 hover:bg-blue-700"
-            >
-              {actualizarTasaCOPMutation.isPending ? "Guardando..." : "Guardar y Sincronizar Tasa COP"}
-            </Button>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <p className="text-xs text-amber-900">
-                🔄 Esta tasa se sincronizará automáticamente en todas las páginas sin necesidad de recargar
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Historial */}
-        <Card className="shadow-lg border-none">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-gray-600" />
-              Historial de Tasas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {tasas.slice(0, 10).map((tasa) => (
-                <div
-                  key={tasa.id}
-                  className="p-4 bg-gray-50 rounded-lg space-y-3"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        {format(new Date(tasa.fecha), "d 'de' MMMM yyyy", { locale: es })}
-                      </p>
-                      <p className="text-sm text-gray-500">{tasa.empleado_nombre}</p>
+                {tasaUSDBase && parseFloat(tasaUSDBase) > 0 && (
+                  <div className="animate-in slide-in-from-top-2 fade-in duration-300">
+                    <div className="relative bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-2xl text-white overflow-hidden shadow-lg shadow-emerald-500/30">
+                      <div className="absolute -right-4 -bottom-4 opacity-10">
+                        <Sparkles className="w-24 h-24" />
+                      </div>
+                      <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-2">Tasa Operativa (+16%)</p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl opacity-80">Bs</span>
+                        <span className="text-5xl font-black tracking-tighter">
+                          {(parseFloat(tasaUSDBase) * 1.16).toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      {format(new Date(tasa.created_date), 'HH:mm')}
+
+                    <div className="mt-4 p-5 bg-emerald-50/50 rounded-2xl border border-emerald-100">
+                      <p className="text-xs font-bold uppercase text-emerald-800/60 mb-3">Conversiones Rápidas</p>
+                      <div className="space-y-2 text-sm font-medium text-emerald-900">
+                        <div className="flex justify-between items-center border-b border-emerald-100/50 pb-2">
+                          <span className="opacity-70">$1.00 USD</span>
+                          <span className="font-bold">Bs {(parseFloat(tasaUSDBase) * 1.16).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between items-center border-b border-emerald-100/50 pb-2">
+                          <span className="opacity-70">$10.00 USD</span>
+                          <span className="font-bold">Bs {(parseFloat(tasaUSDBase) * 1.16 * 10).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1">
+                          <span className="opacity-70">$100.00 USD</span>
+                          <span className="font-bold">Bs {(parseFloat(tasaUSDBase) * 1.16 * 100).toLocaleString('es-ES', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                onClick={handleGuardarTasaUSD}
+                disabled={actualizarTasaUSDMutation.isPending}
+                className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-lg font-bold shadow-lg shadow-emerald-200 transition-all hover:scale-[1.02] active:scale-95"
+              >
+                {actualizarTasaUSDMutation.isPending ? (
+                  <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Guardando...</>
+                ) : (
+                  <><Save className="w-5 h-5 mr-2" /> Publicar Tasa USD</>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Card COP */}
+          <Card className="border-0 shadow-xl shadow-slate-200/50 rounded-[2rem] overflow-hidden group bg-white hover:shadow-2xl hover:shadow-blue-200/40 transition-all duration-500 relative">
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-all duration-500 pointer-events-none">
+              <TrendingUp className="w-32 h-32" />
+            </div>
+            <CardContent className="p-8 space-y-8 relative z-10">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-800">Tasa Pesos (COP)</h2>
+                </div>
+                <p className="text-slate-500 text-sm pl-13">Tasa de cambio Frontera</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-400">COP por cada USD</Label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₡</span>
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={tasaCOP}
+                      onChange={(e) => setTasaCOP(e.target.value)}
+                      placeholder="4000"
+                      className="pl-12 h-16 text-2xl font-black bg-slate-50 border-none rounded-2xl focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {tasaCOP && parseFloat(tasaCOP) > 0 && (
+                  <div className="animate-in slide-in-from-top-2 fade-in duration-300">
+                    <div className="relative bg-gradient-to-br from-blue-500 to-indigo-600 p-6 rounded-2xl text-white overflow-hidden shadow-lg shadow-blue-500/30">
+                      <div className="absolute -right-4 -bottom-4 opacity-10">
+                        <Sparkles className="w-24 h-24" />
+                      </div>
+                      <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-2">Tasa Operativa</p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl opacity-80">₡</span>
+                        <span className="text-5xl font-black tracking-tighter">
+                          {parseFloat(tasaCOP).toLocaleString('es-CO')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 p-5 bg-blue-50/50 rounded-2xl border border-blue-100">
+                      <p className="text-xs font-bold uppercase text-blue-800/60 mb-3">Conversiones Rápidas</p>
+                      <div className="space-y-2 text-sm font-medium text-blue-900">
+                        <div className="flex justify-between items-center border-b border-blue-100/50 pb-2">
+                          <span className="opacity-70">$1.00 USD</span>
+                          <span className="font-bold">₡ {parseFloat(tasaCOP).toLocaleString('es-CO')}</span>
+                        </div>
+                        <div className="flex justify-between items-center border-b border-blue-100/50 pb-2">
+                          <span className="opacity-70">$10.00 USD</span>
+                          <span className="font-bold">₡ {(parseFloat(tasaCOP) * 10).toLocaleString('es-CO')}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1">
+                          <span className="opacity-70">$100.00 USD</span>
+                          <span className="font-bold">₡ {(parseFloat(tasaCOP) * 100).toLocaleString('es-CO')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                onClick={handleGuardarTasaCOP}
+                disabled={actualizarTasaCOPMutation.isPending}
+                className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-lg font-bold shadow-lg shadow-blue-200 transition-all hover:scale-[1.02] active:scale-95"
+              >
+                {actualizarTasaCOPMutation.isPending ? (
+                  <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Guardando...</>
+                ) : (
+                  <><Save className="w-5 h-5 mr-2" /> Publicar Tasa COP</>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Historial Timeline */}
+        <div className="pt-8">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+              <Clock className="w-6 h-6 text-slate-400" />
+              Historial de Actualizaciones
+            </h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {tasas.slice(0, 8).map((tasa) => (
+              <div
+                key={tasa.id}
+                className="group p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300"
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p className="font-bold text-slate-800 text-lg">
+                      {format(new Date(tasa.fecha), "d 'de' MMMM", { locale: es })}
+                    </p>
+                    <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                      <span className="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-amber-400 transition-colors" />
+                      {tasa.empleado_nombre} a las {format(new Date(tasa.created_date), 'HH:mm')}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Tasa Bs</p>
+                    <p className="text-sm font-bold text-emerald-600">
+                      Bs {tasa.tasa_bs_usd?.toLocaleString('es-ES', { minimumFractionDigits: 2 }) || '---'}
                     </p>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                      <p className="text-xs text-emerald-700 mb-1 font-semibold">USD (+16%)</p>
-                      <p className="text-lg font-bold text-emerald-600">
-                        Bs {tasa.tasa_bs_usd.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                    
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-xs text-blue-700 mb-1 font-semibold">COP</p>
-                      <p className="text-lg font-bold text-blue-600">
-                        ₡ {tasa.tasa_cop_usd.toLocaleString('es-CO')}
-                      </p>
-                    </div>
+                  <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Tasa COP</p>
+                    <p className="text-sm font-bold text-blue-600">
+                      ₡ {tasa.tasa_cop_usd?.toLocaleString('es-CO') || '---'}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
+              </div>
+            ))}
+          </div>
+        </div>
 
       </div>
     </div>
