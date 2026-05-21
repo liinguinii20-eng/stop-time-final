@@ -32,7 +32,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar"
+import CalculadoraTasas from "./CalculadoraTasas"
 
 // Importar funciones de control de acceso
 import { getCurrentUser, canAccessPage } from "@/lib/roles"
@@ -114,6 +116,7 @@ export function AppSidebar() {
   const navigate = useNavigate()
   const user = getCurrentUser();
   const userRole = user?.rol?.toLowerCase();
+  const { collapsed } = useSidebar();
 
   // Función para verificar si debe mostrar un grupo
   const shouldShowGroup = (items) => {
@@ -126,6 +129,8 @@ export function AppSidebar() {
     localStorage.removeItem("empleado_sesion")
     navigate("/")
   }
+
+  const tieneAccesoCalculadora = userRole && ["administrador", "cajero", "mesero"].includes(userRole);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-slate-200">
@@ -197,7 +202,10 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* Pie del Sidebar (Cerrar Sesión / Usuario) */}
-      <SidebarFooter className="p-4">
+      <SidebarFooter className={`p-4 ${collapsed ? "flex flex-col items-center gap-4" : "space-y-4"}`}>
+        {tieneAccesoCalculadora && (
+          <CalculadoraTasas collapsed={collapsed} />
+        )}
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton 

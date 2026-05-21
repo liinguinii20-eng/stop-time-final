@@ -10,7 +10,7 @@ export function SidebarProvider({ children, defaultCollapsed = false }) {
   return <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>
 }
 
-function useSidebar() {
+export function useSidebar() {
   return React.useContext(SidebarContext)
 }
 
