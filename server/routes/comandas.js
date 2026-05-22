@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import supabase from '../config/supabase.js';
 import { requireAuth, requireAdmin } from '../middlewares/auth.js';
 import { explodirElemento, descontarDelInventario } from '../services/inventory.js';
@@ -25,8 +26,30 @@ router.get('/', requireAuth, async (req, res) => {
 // Crear comanda con detalles en una sola transacción lógica
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const { numero_comanda, mesa_numero, mesero_nombre, fecha_apertura, estado, total_comanda, detalles } = req.body;
+    const { 
+      numero_comanda, mesa_numero, mesero_nombre, fecha_apertura, 
+      estado, total_comanda, detalles, tipo_movimiento, 
+      empleado_id, empleado_nombre, motivo_merma, admin_password 
+    } = req.body;
+    
+    const movType = tipo_movimiento || 'VENTA';
+    
+    // 0. Validar contraseña si es MERMA o CREDITO_EMPLEADO
+    if (movType === 'MERMA' || movType === 'CREDITO_EMPLEADO') {
+      if (!admin_password) {
+        return res.status(401).json({ error: 'Contraseña de administrador requerida para esta operación' });
+      }
+      const storedPassword = req.user.password || req.user.contrasena;
+      const valid = await bcrypt.compare(admin_password, storedPassword);
+      if (!valid) {
+        return res.status(401).json({ error: 'Contraseña de administrador incorrecta' });
+      }
+    }
+
     const comandaId = crypto.randomUUID();
+    const finalTotal = movType === 'MERMA' ? 0 : (total_comanda || 0);
+    const finalEstado = (movType === 'MERMA' || movType === 'CREDITO_EMPLEADO') ? 'pagada' : (estado || 'abierta');
+    const finalFechaCierre = (movType === 'MERMA' || movType === 'CREDITO_EMPLEADO') ? new Date().toISOString() : null;
     
     // 1. Insertar Comanda
     const { data: comanda, error: cmdError } = await supabase
@@ -37,8 +60,12 @@ router.post('/', requireAdmin, async (req, res) => {
         mesa_numero: mesa_numero !== undefined ? String(mesa_numero) : null,
         mesero_nombre,
         fecha_apertura: fecha_apertura ? new Date(fecha_apertura).toISOString() : new Date().toISOString(),
-        estado: estado || 'abierta',
-        total_comanda: total_comanda || 0
+        fecha_cierre: finalFechaCierre,
+        estado: finalEstado,
+        tipo_movimiento: movType,
+        empleado_id: empleado_id || null,
+        motivo_merma: motivo_merma || null,
+        total_comanda: finalTotal
       })
       .select()
       .single();
@@ -53,8 +80,8 @@ router.post('/', requireAdmin, async (req, res) => {
         platoId: d.plato_id || d.platoId || null,
         platoNombre: d.plato_nombre || d.platoNombre || null,
         cantidad: d.cantidad,
-        precio: d.precio_unitario || d.precio || 0,
-        estado_plato: d.estado_plato || 'pendiente',
+        precio: movType === 'MERMA' ? 0 : (d.precio_unitario || d.precio || 0),
+        estado_plato: finalEstado === 'pagada' ? 'completado' : (d.estado_plato || 'pendiente'),
         notas_plato: d.notas_plato || d.notas || null,
         variante: d.variante || null
       }));
@@ -65,16 +92,46 @@ router.post('/', requireAdmin, async (req, res) => {
       detallesCreados = det;
     }
     
+    // 3. Lógica Especial: Descuento Inmediato y Crédito
+    if (movType === 'MERMA' || movType === 'CREDITO_EMPLEADO') {
+      const consolidado = {};
+      for (const detalle of detallesCreados) {
+        if (detalle.platoId) {
+          await explodirElemento(detalle.platoId, detalle.cantidad, consolidado);
+        }
+      }
+      for (const [ingredienteId, cantidad] of Object.entries(consolidado)) {
+        await descontarDelInventario(ingredienteId, cantidad);
+      }
+
+      if (movType === 'CREDITO_EMPLEADO') {
+        // Crear Cuenta por Cobrar
+        const cxcId = crypto.randomUUID();
+        const { error: cxcErr } = await supabase.from('CuentaPorCobrar').insert({
+          id: cxcId,
+          clienteNombre: `Empleado: ${empleado_nombre || 'Desconocido'}`,
+          empleadoId: empleado_id,
+          monto: finalTotal,
+          estado: 'pendiente'
+        });
+        if (cxcErr) console.error("Error creando CxC para empleado:", cxcErr);
+      }
+      
+      return res.json({ ...comanda, detalles: detallesCreados, isSpecialMode: true });
+    }
+
     res.json({ ...comanda, detalles: detallesCreados });
 
-    // 🔔 Notificar a la cocina en tiempo real
-    broadcastCocina('nueva_comanda', {
-      id: comandaId,
-      numero_comanda,
-      mesa_numero: mesa_numero !== undefined ? String(mesa_numero) : null,
-      mesero_nombre,
-      platos: detallesCreados
-    });
+    // 🔔 Notificar a la cocina en tiempo real SOLO si es VENTA
+    if (movType === 'VENTA') {
+      broadcastCocina('nueva_comanda', {
+        id: comandaId,
+        numero_comanda,
+        mesa_numero: mesa_numero !== undefined ? String(mesa_numero) : null,
+        mesero_nombre,
+        platos: detallesCreados
+      });
+    }
   } catch (e) {
     console.error('Error creating comanda', e);
     res.status(500).json({ error: e.message });

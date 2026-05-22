@@ -37,6 +37,11 @@ export default function Comandas() {
     queryFn: () => base44.entities.Plato.list(),
   });
 
+  const { data: empleados = [] } = useQuery({
+    queryKey: ['personal'],
+    queryFn: () => base44.entities.Empleado.list(),
+  });
+
   // Obtener empleado en sesión
   const [empleadoSesion, setEmpleadoSesion] = React.useState(null);
 
@@ -62,7 +67,7 @@ export default function Comandas() {
       const numeroComanda = generarNumeroComanda();
       const total = platosSeleccionados.reduce((sum, p) => sum + (p.precio * p.cantidad), 0);
 
-      const comanda = await base44.entities.Comanda.create({
+      const payload = {
         numero_comanda: numeroComanda,
         mesa_numero: comandaData.mesa_numero,
         mesero_nombre: empleadoSesion?.nombre_completo || 'Mesero',
@@ -70,24 +75,52 @@ export default function Comandas() {
         estado: 'abierta',
         total_comanda: total,
         notas: comandaData.notas || '',
+        tipo_movimiento: comandaData.tipo_movimiento || 'VENTA',
+        empleado_id: comandaData.empleado_id,
+        empleado_nombre: comandaData.empleado_nombre,
+        motivo_merma: comandaData.motivo_merma,
+        admin_password: comandaData.admin_password,
         detalles: platosSeleccionados.map(p => ({
           plato_id: p.id,
           plato_nombre: p.nombre,
           cantidad: p.cantidad,
           precio_unitario: p.precio
         }))
-      });
+      };
 
-      return comanda;
+      // Since we modified the backend custom route, we can POST to /api/comandas
+      const result = await fetch('/api/comandas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('jwt_token')}`
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!result.ok) {
+        const errData = await result.json();
+        throw new Error(errData.error || 'Error al crear la comanda');
+      }
+      return result.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['comandas'] });
       queryClient.invalidateQueries({ queryKey: ['detalles-comandas'] });
+      
+      if (data.isSpecialMode) {
+        queryClient.invalidateQueries({ queryKey: ['ingredientes'] });
+        queryClient.invalidateQueries({ queryKey: ['alertas'] });
+        if (data.tipo_movimiento === 'CREDITO_EMPLEADO') {
+          queryClient.invalidateQueries({ queryKey: ['cuentas-por-cobrar'] });
+        }
+      }
+      
       setShowForm(false);
-      toast.success("Comanda creada exitosamente");
+      toast.success(data.isSpecialMode ? `Operación procesada: ${data.tipo_movimiento}` : "Comanda creada exitosamente");
     },
-    onError: () => {
-      toast.error("Error al crear la comanda");
+    onError: (err) => {
+      toast.error(err.message);
     }
   });
 
@@ -391,6 +424,7 @@ export default function Comandas() {
         {showForm && (
           <ComandaForm
             platos={platosActivos}
+            empleados={empleados.filter(e => e.activo)}
             onSubmit={handleCrearComanda}
             onCancel={() => setShowForm(false)}
             isLoading={crearComandaMutation.isPending}

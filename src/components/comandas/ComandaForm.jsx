@@ -9,10 +9,17 @@ import { Badge } from "@/components/ui/badge";
 import { Save, XCircle, Plus, Trash2, Receipt, Check, ChevronsUpDown } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-export default function ComandaForm({ platos, onSubmit, onCancel, isLoading }) {
+export default function ComandaForm({ platos, empleados = [], onSubmit, onCancel, isLoading }) {
+  const [tipoMovimiento, setTipoMovimiento] = useState("VENTA");
+  const [motivoMerma, setMotivoMerma] = useState("");
+  const [empleadoCredito, setEmpleadoCredito] = useState("");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+
   const [mesaNumero, setMesaNumero] = useState("");
   const [notas, setNotas] = useState("");
   const [platoSeleccionado, setPlatoSeleccionado] = useState("");
@@ -21,6 +28,12 @@ export default function ComandaForm({ platos, onSubmit, onCancel, isLoading }) {
   const [platosAgregados, setPlatosAgregados] = useState([]);
   const [openCombobox, setOpenCombobox] = useState(false);
   const [varianteSeleccionada, setVarianteSeleccionada] = useState("normal"); // normal, 6, 12
+
+  const platosDisponibles = platos.filter(p => {
+    if (tipoMovimiento === 'MERMA') return p.permitir_merma;
+    if (tipoMovimiento === 'CREDITO_EMPLEADO') return p.permitir_credito_empleado;
+    return true; // VENTA
+  });
 
   const handleAgregarPlato = () => {
     if (!platoSeleccionado) {
@@ -80,8 +93,13 @@ export default function ComandaForm({ platos, onSubmit, onCancel, isLoading }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!mesaNumero.trim()) {
+    if (tipoMovimiento === 'VENTA' && !mesaNumero.trim()) {
       toast.error("Ingresa el número de mesa");
+      return;
+    }
+    
+    if (tipoMovimiento === 'CREDITO_EMPLEADO' && !empleadoCredito) {
+      toast.error("Selecciona un empleado para el crédito");
       return;
     }
 
@@ -89,11 +107,26 @@ export default function ComandaForm({ platos, onSubmit, onCancel, isLoading }) {
       toast.error("Agrega al menos un plato a la comanda");
       return;
     }
+    
+    if (tipoMovimiento !== 'VENTA') {
+      setShowPasswordModal(true);
+      return;
+    }
 
+    procesarEnvio();
+  };
+
+  const procesarEnvio = (password = "") => {
+    const empleadoObj = empleados.find(e => e.id === empleadoCredito);
     onSubmit({
       comandaData: {
-        mesa_numero: mesaNumero,
-        notas: notas
+        mesa_numero: tipoMovimiento === 'VENTA' ? mesaNumero : 'N/A',
+        notas: notas,
+        tipo_movimiento: tipoMovimiento,
+        empleado_id: tipoMovimiento === 'CREDITO_EMPLEADO' ? empleadoCredito : null,
+        empleado_nombre: tipoMovimiento === 'CREDITO_EMPLEADO' ? empleadoObj?.nombre : null,
+        motivo_merma: tipoMovimiento === 'MERMA' ? motivoMerma : null,
+        admin_password: password
       },
       platosSeleccionados: platosAgregados
     });
@@ -111,23 +144,82 @@ export default function ComandaForm({ platos, onSubmit, onCancel, isLoading }) {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="p-8 space-y-8">
-          {/* Información de la Mesa */}
+          {/* Modo de Operación */}
           <div className="space-y-4">
             <h3 className="text-lg font-black text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
-              <span>📍</span> Información de la Mesa
+              <span>⚙️</span> Modo de Operación
+            </h3>
+            <div className="flex flex-wrap gap-4">
+              {['VENTA', 'MERMA', 'CREDITO_EMPLEADO'].map(modo => (
+                <Button
+                  key={modo}
+                  type="button"
+                  variant={tipoMovimiento === modo ? "default" : "outline"}
+                  onClick={() => {
+                    setTipoMovimiento(modo);
+                    setPlatosAgregados([]); // Resetear platos al cambiar modo
+                    setPlatoSeleccionado("");
+                  }}
+                  className={cn(
+                    "rounded-2xl h-12 px-6 font-bold transition-all",
+                    tipoMovimiento === modo && modo === 'VENTA' && "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200",
+                    tipoMovimiento === modo && modo === 'MERMA' && "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-200",
+                    tipoMovimiento === modo && modo === 'CREDITO_EMPLEADO' && "bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-200"
+                  )}
+                >
+                  {modo === 'VENTA' ? 'Venta Normal' : modo === 'MERMA' ? 'Merma (Dañado)' : 'Crédito a Empleado'}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Información de la Mesa / Detalles */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-black text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
+              <span>📍</span> Detalles de la {tipoMovimiento === 'VENTA' ? 'Mesa' : 'Operación'}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="mesa" className="text-xs font-bold uppercase tracking-wider text-slate-400">Número de Mesa *</Label>
-                <Input
-                  id="mesa"
-                  value={mesaNumero}
-                  onChange={(e) => setMesaNumero(e.target.value)}
-                  placeholder="Ej: Mesa 5 o M-5"
-                  required
-                  className="h-14 bg-slate-50 border-none rounded-2xl text-sm font-semibold focus-visible:ring-amber-500"
-                />
-              </div>
+              {tipoMovimiento === 'VENTA' && (
+                <div className="space-y-2">
+                  <Label htmlFor="mesa" className="text-xs font-bold uppercase tracking-wider text-slate-400">Número de Mesa *</Label>
+                  <Input
+                    id="mesa"
+                    value={mesaNumero}
+                    onChange={(e) => setMesaNumero(e.target.value)}
+                    placeholder="Ej: Mesa 5 o M-5"
+                    required
+                    className="h-14 bg-slate-50 border-none rounded-2xl text-sm font-semibold focus-visible:ring-amber-500"
+                  />
+                </div>
+              )}
+              {tipoMovimiento === 'MERMA' && (
+                <div className="space-y-2">
+                  <Label htmlFor="motivo" className="text-xs font-bold uppercase tracking-wider text-slate-400">Motivo de Merma</Label>
+                  <Input
+                    id="motivo"
+                    value={motivoMerma}
+                    onChange={(e) => setMotivoMerma(e.target.value)}
+                    placeholder="Ej: Plato se cayó, receta mala..."
+                    className="h-14 bg-slate-50 border-none rounded-2xl text-sm font-semibold focus-visible:ring-red-500"
+                  />
+                </div>
+              )}
+              {tipoMovimiento === 'CREDITO_EMPLEADO' && (
+                <div className="space-y-2">
+                  <Label htmlFor="empleado" className="text-xs font-bold uppercase tracking-wider text-slate-400">Empleado *</Label>
+                  <select
+                    id="empleado"
+                    value={empleadoCredito}
+                    onChange={(e) => setEmpleadoCredito(e.target.value)}
+                    className="w-full h-14 bg-slate-50 border-none rounded-2xl text-sm font-semibold px-4 focus:outline-none focus:ring-2 focus:ring-purple-500/20 appearance-none text-slate-700"
+                  >
+                    <option value="">Selecciona un empleado...</option>
+                    {empleados.map(e => (
+                      <option key={e.id} value={e.id}>{e.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="notas" className="text-xs font-bold uppercase tracking-wider text-slate-400">Notas Generales</Label>
                 <Textarea
@@ -175,7 +267,7 @@ export default function ComandaForm({ platos, onSubmit, onCancel, isLoading }) {
                           <CommandList>
                             <CommandEmpty>No se encontró el plato.</CommandEmpty>
                             <CommandGroup>
-                              {platos.map((plato) => (
+                              {platosDisponibles.map((plato) => (
                                 <CommandItem
                                   key={plato.id}
                                   value={plato.nombre}
@@ -403,6 +495,44 @@ export default function ComandaForm({ platos, onSubmit, onCancel, isLoading }) {
           </Button>
         </CardFooter>
       </form>
+
+      <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+        <DialogContent className="sm:max-w-md rounded-[2rem]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black">Se requiere Autorización</DialogTitle>
+            <DialogDescription>
+              Ingresa la contraseña de administrador para procesar esta {tipoMovimiento === 'MERMA' ? 'Merma' : 'cuenta de Crédito'}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin_password">Contraseña de Administrador</Label>
+              <Input
+                id="admin_password"
+                type="password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                className="h-14 rounded-2xl"
+                placeholder="******"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setShowPasswordModal(false)} className="rounded-xl h-12">Cancelar</Button>
+            <Button 
+              type="button" 
+              onClick={() => {
+                setShowPasswordModal(false);
+                procesarEnvio(adminPassword);
+                setAdminPassword("");
+              }}
+              className="rounded-xl h-12 bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Autorizar y Procesar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

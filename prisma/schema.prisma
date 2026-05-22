@@ -53,6 +53,8 @@ model Plato {
   categoria     String?
   activo        Boolean  @default(true)
   tiene_piezas  Boolean  @default(false)
+  permitir_merma Boolean @default(false)
+  permitir_credito_empleado Boolean @default(false)
   precio_6      Float    @default(0)
   precio_12     Float    @default(0)
   costo_total   Float    @default(0)
@@ -80,6 +82,9 @@ model Comanda {
   fecha_apertura DateTime @default(now())
   fecha_cierre   DateTime?
   estado         String   @default("abierta")
+  tipo_movimiento String  @default("VENTA")
+  empleado_id    String?
+  motivo_merma   String?
   total_comanda  Float    @default(0)
   detalles       DetalleComanda[]
 
@@ -175,6 +180,7 @@ model Compra {
 model CuentaPorCobrar {
   id            String   @id @default(uuid())
   clienteNombre String?
+  empleadoId    String?
   monto         Float
   estado        String   @default("pendiente")
   vencimiento   DateTime?

@@ -22,6 +22,8 @@ export default function PlatoForm({ plato, ingredientes, recetasPrimarias, recet
     tiene_piezas: false,
     precio_6: 0,
     precio_12: 0,
+    permitir_merma: false,
+    permitir_credito_empleado: false,
   });
 
   const [recetas, setRecetas] = useState(() => {
@@ -166,6 +168,23 @@ export default function PlatoForm({ plato, ingredientes, recetasPrimarias, recet
                     placeholder="Detalles para el menú digital..."
                     className="rounded-xl border-slate-100 bg-slate-50/50 min-h-[100px]"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                  <div className="space-y-2">
+                    <Label htmlFor="switch-merma" className="text-slate-500 font-bold ml-1 text-[10px] cursor-pointer">PERMITIR COMO MERMA</Label>
+                    <div className="flex items-center gap-3 h-12 px-4 bg-red-50/50 rounded-xl border border-red-100">
+                      <Switch id="switch-merma" checked={formData.permitir_merma || false} onCheckedChange={(v) => setFormData({ ...formData, permitir_merma: v })} className="data-[state=checked]:bg-red-500" />
+                      <Label htmlFor="switch-merma" className="text-xs font-bold text-red-700 cursor-pointer">{formData.permitir_merma ? "Habilitado" : "No"}</Label>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="switch-credito" className="text-slate-500 font-bold ml-1 text-[10px] cursor-pointer">PERMITIR CRÉDITO EMPLEADO</Label>
+                    <div className="flex items-center gap-3 h-12 px-4 bg-purple-50/50 rounded-xl border border-purple-100">
+                      <Switch id="switch-credito" checked={formData.permitir_credito_empleado || false} onCheckedChange={(v) => setFormData({ ...formData, permitir_credito_empleado: v })} className="data-[state=checked]:bg-purple-500" />
+                      <Label htmlFor="switch-credito" className="text-xs font-bold text-purple-700 cursor-pointer">{formData.permitir_credito_empleado ? "Habilitado" : "No"}</Label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

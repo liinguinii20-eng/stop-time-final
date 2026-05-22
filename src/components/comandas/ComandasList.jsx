@@ -62,9 +62,21 @@ export default function ComandasList({ comandas, detalles, onVerDetalle, isLoadi
                       </span>
                     </p>
                   </div>
-                  <Badge className={`${estadoInfo.color} border px-3 py-1 rounded-full text-xs font-black`}>
-                    {estadoInfo.label}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge className={`${estadoInfo.color} border px-3 py-1 rounded-full text-xs font-black`}>
+                      {estadoInfo.label}
+                    </Badge>
+                    {comanda.tipo_movimiento === 'MERMA' && (
+                      <Badge className="bg-red-50 text-red-700 border-red-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                        Merma
+                      </Badge>
+                    )}
+                    {comanda.tipo_movimiento === 'CREDITO_EMPLEADO' && (
+                      <Badge className="bg-purple-50 text-purple-700 border-purple-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                        Crédito
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
 
@@ -100,6 +112,28 @@ export default function ComandasList({ comandas, detalles, onVerDetalle, isLoadi
                       {totalPlatos} {totalPlatos === 1 ? 'plato' : 'platos'}
                     </span>
                   </div>
+                  
+                  {comanda.tipo_movimiento === 'MERMA' && comanda.motivo_merma && (
+                    <div className="flex items-center justify-between text-sm mt-2 border-t border-red-50 pt-3">
+                      <span className="text-red-400 font-bold uppercase tracking-wider text-[10px] flex items-center gap-2">
+                        Motivo
+                      </span>
+                      <span className="font-semibold text-red-700 truncate max-w-[150px]">
+                        {comanda.motivo_merma}
+                      </span>
+                    </div>
+                  )}
+
+                  {comanda.tipo_movimiento === 'CREDITO_EMPLEADO' && comanda.empleado_id && (
+                    <div className="flex items-center justify-between text-sm mt-2 border-t border-purple-50 pt-3">
+                      <span className="text-purple-400 font-bold uppercase tracking-wider text-[10px] flex items-center gap-2">
+                        Empleado
+                      </span>
+                      <span className="font-semibold text-purple-700 truncate max-w-[150px]">
+                        ID: {comanda.empleado_id.substring(0, 5)}...
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {comanda.notas && (

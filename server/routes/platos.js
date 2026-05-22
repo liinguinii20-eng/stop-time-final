@@ -41,6 +41,8 @@ router.post('/', requireAdmin, async (req, res) => {
     const precio_12 = parseFloat(pick(body, 'precio_12', 'precio12')) || 0;
     const costo_total = parseFloat(pick(body, 'costo_total', 'costoTotal')) || 0;
     const precio_sugerido = parseFloat(pick(body, 'precio_sugerido', 'precioSugerido')) || 0;
+    const permitir_merma = pick(body, 'permitir_merma', 'permitirMerma') || false;
+    const permitir_credito_empleado = pick(body, 'permitir_credito_empleado', 'permitirCreditoEmpleado') || false;
     const recetas = body.recetas;
     
     const platoId = crypto.randomUUID();
@@ -58,7 +60,9 @@ router.post('/', requireAdmin, async (req, res) => {
         precio_6,
         precio_12,
         costo_total,
-        precio_sugerido
+        precio_sugerido,
+        permitir_merma,
+        permitir_credito_empleado
       })
       .select().single();
     if (pError) throw pError;
@@ -109,7 +113,13 @@ router.put('/:id', requireAdmin, async (req, res) => {
     const precio_12 = parseFloat(pick(body, 'precio_12', 'precio12')) || 0;
     const costo_total = parseFloat(pick(body, 'costo_total', 'costoTotal')) || 0;
     const precio_sugerido = parseFloat(pick(body, 'precio_sugerido', 'precioSugerido')) || 0;
+    const permitir_merma = pick(body, 'permitir_merma', 'permitirMerma') || false;
+    const permitir_credito_empleado = pick(body, 'permitir_credito_empleado', 'permitirCreditoEmpleado') || false;
     const recetas = body.recetas;
+
+    console.log("==> PUT /platos/:id", id);
+    console.log("==> BODY RECIBIDO:", JSON.stringify(body).slice(0, 500));
+    console.log("==> VALORES EXTRAIDOS:", { permitir_merma, permitir_credito_empleado });
 
     const { data: plato, error: pError } = await supabase
       .from('Plato')
@@ -123,7 +133,9 @@ router.put('/:id', requireAdmin, async (req, res) => {
         precio_6,
         precio_12,
         costo_total,
-        precio_sugerido
+        precio_sugerido,
+        permitir_merma,
+        permitir_credito_empleado
       })
       .eq('id', id)
       .select().single();
