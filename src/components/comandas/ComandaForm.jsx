@@ -72,7 +72,7 @@ export default function ComandaForm({ platos, empleados = [], onSubmit, onCancel
       id: plato.id,
       nombre: nombreFinal,
       precio: precioFinal,
-      cantidad: parseInt(cantidad),
+      cantidad: parseFloat(cantidad) || 0,
       notas: notasPlato,
       variante: variante,
       original_plato_nombre: plato.nombre // para referencia
@@ -334,7 +334,8 @@ export default function ComandaForm({ platos, empleados = [], onSubmit, onCancel
                     <Input
                       id="cantidad"
                       type="number"
-                      min="1"
+                      min="0"
+                      step="any"
                       value={cantidad}
                       onChange={(e) => setCantidad(e.target.value)}
                       className="h-14 bg-white border-slate-200 rounded-2xl text-sm font-semibold text-center focus-visible:ring-amber-500"

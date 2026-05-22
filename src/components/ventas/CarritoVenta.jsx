@@ -35,9 +35,10 @@ export default function CarritoVenta({ carrito, onActualizarCantidad, onEliminar
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
-                    min="1"
+                    min="0"
+                    step="any"
                     value={item.cantidad}
-                    onChange={(e) => onActualizarCantidad(item.plato.id, parseInt(e.target.value) || 1)}
+                    onChange={(e) => onActualizarCantidad(item.plato.id, parseFloat(e.target.value) || 0)}
                     className="w-16 h-8 text-center"
                   />
                   <Button

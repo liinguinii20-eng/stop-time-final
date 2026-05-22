@@ -164,7 +164,7 @@ export default function ComandaDetalle({
       id: plato.id,
       nombre: nombreFinal,
       precio: precioFinal,
-      cantidad: parseInt(cantidad),
+      cantidad: parseFloat(cantidad) || 0,
       notas: notasPlato,
       variante: variante
     }];
@@ -412,7 +412,8 @@ export default function ComandaDetalle({
                       <Label>Cantidad</Label>
                       <Input
                         type="number"
-                        min="1"
+                        min="0"
+                        step="any"
                         value={cantidad}
                         onChange={(e) => setCantidad(e.target.value)}
                       />
