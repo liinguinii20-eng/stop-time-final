@@ -19,7 +19,12 @@ router.get('/', requireAuth, async (req, res) => {
 
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const { createdAt, ...bodyData } = req.body;
+    const { createdAt, metodoPago, ...bodyData } = req.body;
+    
+    if (metodoPago) {
+      bodyData.metodo_pago = metodoPago;
+    }
+
     const { data, error } = await supabase
       .from('PagoCuentaPorCobrar')
       .insert({
