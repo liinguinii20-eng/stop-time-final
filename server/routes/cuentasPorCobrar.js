@@ -11,7 +11,16 @@ router.get('/', requireAuth, async (req, res) => {
       .select('*')
       .order('fecha_creacion', { ascending: false, nullsFirst: false });
     if (error) throw error;
-    res.json(data);
+    
+    // Normalize data for frontend
+    const normalizedData = data.map(item => ({
+      ...item,
+      cliente_nombre: item.cliente_nombre || item.clienteNombre,
+      empleado_id: item.empleado_id || item.empleadoId,
+      fecha_vencimiento: item.fecha_vencimiento || item.vencimiento
+    }));
+    
+    res.json(normalizedData);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

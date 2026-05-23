@@ -115,8 +115,9 @@ export default function CuentasPorCobrar() {
 
   const cuentasFiltradas = cuentas.filter(cuenta => {
     const matchesEstado = estadoFiltro === "todas" || cuenta.estado === estadoFiltro;
+    const nombre = cuenta.cliente_nombre || cuenta.clienteNombre || "";
     const matchesSearch = 
-      cuenta.cliente_nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cuenta.comanda_numero?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cuenta.cliente_telefono?.toLowerCase().includes(searchTerm.toLowerCase());
     
