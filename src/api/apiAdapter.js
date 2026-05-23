@@ -266,17 +266,19 @@ const normalizeForServer = (entity, data) => {
   }
   
   // === CAMPOS PARA ADELANTOS ===
-  if (normalized.empleado_nombre) {
-    normalized.empleado = normalized.empleado_nombre;
-    delete normalized.empleado_nombre;
-  }
-  if (normalized.notas) {
-    normalized.descripcion = normalized.notas;
-    delete normalized.notas;
-  }
-  if (normalized.fecha_adelanto) {
-    normalized.fecha = normalized.fecha_adelanto;
-    delete normalized.fecha_adelanto;
+  if (entity === 'Adelanto') {
+    if (normalized.empleado_nombre) {
+      normalized.empleado = normalized.empleado_nombre;
+      delete normalized.empleado_nombre;
+    }
+    if (normalized.notas) {
+      normalized.descripcion = normalized.notas;
+      delete normalized.notas;
+    }
+    if (normalized.fecha_adelanto) {
+      normalized.fecha = normalized.fecha_adelanto;
+      delete normalized.fecha_adelanto;
+    }
   }
 
   // === CAMPOS PARA GASTOS ===
