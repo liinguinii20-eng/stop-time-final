@@ -85,7 +85,8 @@ export default function Adelantos() {
     const fin = endOfMonth(today);
 
     const filtered = adelantos.filter(a => {
-      const matchesSearch = a.empleado_nombre?.toLowerCase().includes(searchTerm.toLowerCase());
+      const name = a.empleado_nombre || a.empleado || "";
+      const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesEstado = estadoFiltro === "todos" || a.estado === estadoFiltro;
       return matchesSearch && matchesEstado;
     });

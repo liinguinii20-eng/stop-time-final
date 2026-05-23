@@ -372,6 +372,10 @@ const normalizeFromServer = (entity, data) => {
     normalized.empleado_id = normalized.empleadoId;
     delete normalized.empleadoId;
   }
+  if (normalized.empleado) {
+    normalized.empleado_nombre = normalized.empleado;
+    // Don't delete empleado as it might be used directly in some places
+  }
   
   // Revertir nombres de campos
   if (normalized.platoNombre) {
