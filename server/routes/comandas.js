@@ -110,7 +110,6 @@ router.post('/', requireAdmin, async (req, res) => {
         const cxcId = crypto.randomUUID();
         const { error: cxcErr } = await supabase.from('CuentaPorCobrar').insert({
           id: cxcId,
-          cliente_nombre: `Empleado: ${empleado_nombre || 'Desconocido'}`,
           clienteNombre: `Empleado: ${empleado_nombre || 'Desconocido'}`,
           empleadoId: empleado_id,
           monto: finalTotal,
