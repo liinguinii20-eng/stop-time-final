@@ -7,7 +7,8 @@ import { toast } from "sonner";
 import PlatosSelector from "../components/ventas/PlatosSelector";
 import CarritoVenta from "../components/ventas/CarritoVenta";
 import PagoModal from "../components/ventas/PagoModal";
-import { descontarStock } from "../components/utils/descontarStock";
+// NOTA: El descuento de inventario se maneja exclusivamente en el backend (POST /ventas)
+// No llamar descontarStock desde el frontend para evitar doble descuento.
 
 export default function ProcesarVenta() {
   const [carrito, setCarrito] = useState([]);
@@ -32,38 +33,28 @@ export default function ProcesarVenta() {
   const procesarVentaMutation = useMutation({
     mutationFn: async (ventaData) => {
       try {
-        // 1. Crear la venta
+        // 1. Crear la venta CON DETALLES para que el backend pueda descontar inventario
         const venta = await base44.entities.Venta.create({
           fecha_hora: new Date().toISOString(),
           total_venta: ventaData.total,
           metodo_pago: ventaData.metodoPago,
           costo_total: 0,
-          ganancia: 0
-        });
-
-        // 2. Procesar cada plato del carrito y descontar inventario con EXPLOSIÓN DE MATERIALES
-        console.log('🛒 INICIANDO PROCESAMIENTO DE CARRITO:', carrito.length, 'items');
-        
-        for (const item of carrito) {
-          console.log(`📦 Procesando: ${item.plato.nombre} x ${item.cantidad}`);
-          
-          // Crear detalle de venta
-          await base44.entities.DetalleVenta.create({
-            venta_id: venta.id,
+          ganancia: 0,
+          detalles: carrito.map(item => ({
             plato_id: item.plato.id,
             plato_nombre: item.plato.nombre,
             cantidad: item.cantidad,
             precio_unitario: item.plato.precio,
-            subtotal: item.plato.precio * item.cantidad,
-            costo_unitario: 0
-          });
+            subtotal: item.plato.precio * item.cantidad
+          }))
+        });
 
-          // 🔥 EXPLOSIÓN DE MATERIALES: Descontar stock recursivamente con consolidación
-          console.log(`🔥 Ejecutando explosión de materiales para: ${item.plato.nombre}`);
-          const resultado = await descontarStock(item.plato.id, item.cantidad);
-          console.log('✅ Resultado explosión:', resultado);
-        }
-        console.log('✅ VENTA COMPLETADA - Todos los ingredientes descontados');
+        // 2. El backend POST /ventas ya maneja:
+        //    - Inserción de DetalleVenta
+        //    - Explosión de materiales (BOM)
+        //    - Descuento de inventario
+        // NO descontar aquí para evitar doble descuento.
+        console.log('✅ VENTA PROCESADA - El backend manejará el descuento de inventario');
 
         return venta;
       } catch (error) {

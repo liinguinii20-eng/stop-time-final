@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import ComandaForm from "../components/comandas/ComandaForm";
 import ComandasList from "../components/comandas/ComandasList";
 import ComandaDetalle from "../components/comandas/ComandaDetalle";
-import { descontarStock } from "../components/utils/descontarStock";
+// NOTA: El descuento de inventario lo maneja el backend en POST /comandas y POST /comandas/:id/pagar
 
 export default function Comandas() {
   const [showForm, setShowForm] = useState(false);

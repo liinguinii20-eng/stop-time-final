@@ -30,9 +30,9 @@ router.post('/', requireAdmin, async (req, res) => {
         id: crypto.randomUUID(),
         nombre: nombre?.trim().toLowerCase(),
         unidad_medida: unidad_medida || 'kg',
-        costo_por_unidad: parseFloat(costo) || 0,
-        cantidad_disponible: parseFloat(cantidadDisp) || 0,
-        cantidad_minima: parseFloat(cantidadMin) || 0
+        costo_por_unidad: parseFloat(costo) ?? 0,
+        cantidad_disponible: parseFloat(cantidadDisp) ?? 0,
+        cantidad_minima: parseFloat(cantidadMin) ?? 0
       })
       .select()
       .single();
@@ -57,7 +57,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Ingrediente no encontrado' });
     }
     
-    const nuevoCosto = parseFloat(costo_por_unidad || costoPorUnidad) || 0;
+    const nuevoCosto = parseFloat(costo_por_unidad ?? costoPorUnidad) ?? 0;
     
     const { data, error } = await supabase
       .from('Ingrediente')
@@ -65,10 +65,10 @@ router.put('/:id', requireAdmin, async (req, res) => {
         nombre: nombre?.trim().toLowerCase(),
         unidad_medida: unidad_medida || 'kg',
         unidad_receta,
-        factor_conversion: parseFloat(factor_conversion || factorConversion) || 1,
+        factor_conversion: parseFloat(factor_conversion ?? factorConversion) || 1,
         costo_por_unidad: nuevoCosto,
-        cantidad_disponible: parseFloat(cantidad_disponible || cantidadDisponible) || 0,
-        cantidad_minima: parseFloat(cantidad_minima || cantidadMinima) || 0
+        cantidad_disponible: parseFloat(cantidad_disponible ?? cantidadDisponible) ?? 0,
+        cantidad_minima: parseFloat(cantidad_minima ?? cantidadMinima) ?? 0
       })
       .eq('id', id)
       .select()
