@@ -19,8 +19,13 @@ router.get('/', requireAuth, async (req, res) => {
 
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const { platoId, ingredienteId, ingredienteNombre, cantidad_requerida, costo_ingrediente, tipo, plato_nombre } = req.body;
+    const { platoId, ingredienteId, ingredienteNombre, cantidad_requerida, cantidadRequerida, costo_ingrediente, costoIngrediente, tipo, plato_nombre } = req.body;
+    console.log('Body recibido en backend:', req.body);
     
+    // Accept both camelCase (from apiAdapter) and snake_case
+    const finalCantidad = parseFloat(cantidad_requerida || cantidadRequerida) || 0;
+    const finalCosto = parseFloat(costo_ingrediente || costoIngrediente) || 0;
+
     const { data, error } = await supabase
       .from('Receta')
       .insert({
@@ -29,8 +34,8 @@ router.post('/', requireAdmin, async (req, res) => {
         ingredienteId: ingredienteId || req.body.ingrediente_id,
         ingredienteNombre: ingredienteNombre || req.body.ingrediente_nombre,
         tipo: tipo || 'ingrediente',
-        cantidad_requerida: parseFloat(cantidad_requerida) || 1,
-        costo_ingrediente: parseFloat(costo_ingrediente) || 0,
+        cantidad_requerida: finalCantidad,
+        costo_ingrediente: finalCosto,
         plato_nombre: plato_nombre
       })
       .select()

@@ -88,6 +88,8 @@ export default function Comandas() {
         }))
       };
 
+      console.log('Payload a enviar:', payload);
+
       // Since we modified the backend custom route, we can POST to /api/comandas
       const result = await fetch('/api/comandas', {
         method: 'POST',

@@ -343,6 +343,14 @@ const normalizeFromServer = (entity, data) => {
   
   const normalized = { ...data };
   
+  // Fix timezone for Postgres timestamp without timezone
+  const dateFields = ['fecha_apertura', 'fecha_cierre', 'fecha_venta', 'created_date', 'createdAt', 'fecha_inicio', 'fecha_fin'];
+  dateFields.forEach(field => {
+    if (normalized[field] && typeof normalized[field] === 'string' && !normalized[field].endsWith('Z')) {
+      normalized[field] += 'Z';
+    }
+  });
+
   // Revertir mapeos de IDs
   if (normalized.comandaId) {
     normalized.comanda_id = normalized.comandaId;

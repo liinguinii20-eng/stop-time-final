@@ -35,13 +35,15 @@ export default function RecetaManager({ plato, ingredientes, recetas, recetasPri
         nombreElemento = elemento.nombre;
         costoIngrediente = recetaData.cantidad_requerida * elemento.costo_por_unidad;
       }
-      
-      return base44.entities.Receta.create({
+      const payload = {
         ...recetaData,
         costo_ingrediente: costoIngrediente,
         plato_nombre: plato.nombre,
         ingrediente_nombre: nombreElemento
-      });
+      };
+      console.log('Payload a enviar:', payload);
+      
+      return base44.entities.Receta.create(payload);
     },
     onSuccess: async () => {
       await recalcularCostoPlato();

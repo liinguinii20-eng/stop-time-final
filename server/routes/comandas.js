@@ -31,6 +31,7 @@ router.post('/', requireAdmin, async (req, res) => {
       estado, total_comanda, detalles, tipo_movimiento, 
       empleado_id, empleado_nombre, motivo_merma, admin_password 
     } = req.body;
+    console.log('Body recibido en backend:', req.body);
     
     const movType = tipo_movimiento || 'VENTA';
     
