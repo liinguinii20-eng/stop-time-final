@@ -11,7 +11,7 @@ import {
   ChevronUp,
   List
 } from "lucide-react";
-
+import CierreTrimestral from '../components/CierreTrimestral';
 
 // API helper
 const API_URL = '/api';
@@ -132,13 +132,18 @@ export default function AdminReset() {
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="p-3 bg-red-100 rounded-xl">
-            <ShieldAlert className="w-8 h-8 text-red-600" />
+        <div className="flex items-center gap-4 mb-8 justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-red-100 rounded-xl">
+              <ShieldAlert className="w-8 h-8 text-red-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Administración - Reset del Sistema</h1>
+              <p className="text-gray-500">Ver datos antes de eliminar</p>
+            </div>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Administración - Reset del Sistema</h1>
-            <p className="text-gray-500">Ver datos antes de eliminar</p>
+            <CierreTrimestral />
           </div>
         </div>
 
