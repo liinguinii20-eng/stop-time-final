@@ -1,197 +1,168 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Pencil, AlertTriangle, CheckCircle, ShoppingCart, DollarSign, History, Trash2 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, ShoppingCart } from "lucide-react";
 
-export default function IngredientesList({ ingredientes, onEdit, onNuevoCosto, onVerHistorial, onComprar, onDelete, isLoading }) {
-  if (isLoading) {
-    return (
-      <Card className="shadow-lg border-none">
-        <CardContent className="p-6">
-          <Skeleton className="h-64 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
+export default function ModalComprarIngrediente({ ingrediente, onConfirm, onCancel, isLoading }) {
+  const [formData, setFormData] = useState({
+    cantidad: "",
+    costo_unitario: "",
+    proveedor: "",
+    numero_factura: "",
+    metodo_pago: "Efectivo",
+    notas: ""
+  });
 
-  if (ingredientes.length === 0) {
-    return (
-      <Card className="shadow-lg border-none">
-        <CardContent className="p-12 text-center">
-          <p className="text-gray-500">No se encontraron ingredientes</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  useEffect(() => {
+    if (ingrediente) {
+      setFormData({
+        cantidad: "",
+        costo_unitario: ingrediente.costo_por_unidad || "",
+        proveedor: ingrediente.proveedor || "",
+        numero_factura: "",
+        metodo_pago: "Efectivo",
+        notas: ""
+      });
+    }
+  }, [ingrediente]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.cantidad || !formData.costo_unitario) return;
+
+    onConfirm({
+      ...formData,
+      cantidad: parseFloat(formData.cantidad),
+      costo_unitario: parseFloat(formData.costo_unitario)
+    });
+  };
+
+  const costoTotal = (parseFloat(formData.cantidad || 0) * parseFloat(formData.costo_unitario || 0)).toFixed(2);
 
   return (
-    <Card className="shadow-lg border-none overflow-hidden">
-      {/* Vista móvil - Cards */}
-      <div className="block lg:hidden p-4 space-y-3">
-        {ingredientes.map((ingrediente) => {
-          const bajoStock = ingrediente.cantidad_disponible <= ingrediente.cantidad_minima;
-          return (
-            <div key={ingrediente.id} className={`border rounded-lg p-4 space-y-3 ${bajoStock ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-gray-900 text-sm truncate">{ingrediente.nombre}</h4>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="text-xs">{ingrediente.unidad_medida}</Badge>
-                    {bajoStock ? (
-                      <Badge variant="destructive" className="flex items-center gap-1 text-xs">
-                        <AlertTriangle className="w-3 h-3" />
-                        Bajo Stock
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="flex items-center gap-1 bg-green-50 text-green-700 border-green-200 text-xs">
-                        <CheckCircle className="w-3 h-3" />
-                        OK
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onEdit(ingrediente)}
-                  className="hover:bg-amber-50 hover:text-amber-600 flex-shrink-0"
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onDelete(ingrediente)}
-                  className="hover:bg-red-50 hover:text-red-600 flex-shrink-0"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-gray-500 text-xs">Costo/Unidad</p>
-                  <p className="font-semibold text-gray-900">${(ingrediente.costo_por_unidad ?? 0).toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500 text-xs">Stock</p>
-                  <p className={`font-semibold ${bajoStock ? 'text-red-600' : 'text-green-600'}`}>
-                    {ingrediente.cantidad_disponible} {ingrediente.unidad_medida}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-500 text-xs">Mínimo</p>
-                  <p className="font-semibold text-gray-900">{ingrediente.cantidad_minima} {ingrediente.unidad_medida}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500 text-xs">Proveedor</p>
-                  <p className="font-semibold text-gray-900 truncate">{ingrediente.proveedor || "-"}</p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+    <Dialog open={!!ingrediente} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <ShoppingCart className="w-5 h-5 text-green-600" />
+            Comprar Ingrediente
+          </DialogTitle>
+          <DialogDescription>
+            Registra una nueva compra para {ingrediente?.nombre}.
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Vista desktop - Tabla */}
-      <div className="hidden lg:block overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-50">
-              <TableHead>Nombre</TableHead>
-              <TableHead>Unidad</TableHead>
-              <TableHead>Costo/Unidad</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead>Mínimo</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Proveedor</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {ingredientes.map((ingrediente) => {
-              const bajoStock = ingrediente.cantidad_disponible <= ingrediente.cantidad_minima;
-              return (
-                <TableRow key={ingrediente.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium">{ingrediente.nombre}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{ingrediente.unidad_medida}</Badge>
-                  </TableCell>
-                  <TableCell>${(ingrediente.costo_por_unidad ?? 0).toFixed(2)}</TableCell>
-                  <TableCell className={bajoStock ? "text-red-600 font-semibold" : "text-green-600 font-semibold"}>
-                    {ingrediente.cantidad_disponible} {ingrediente.unidad_medida}
-                  </TableCell>
-                  <TableCell>{ingrediente.cantidad_minima} {ingrediente.unidad_medida}</TableCell>
-                  <TableCell>
-                    {bajoStock ? (
-                      <Badge variant="destructive" className="flex items-center gap-1 w-fit">
-                        <AlertTriangle className="w-3 h-3" />
-                        Bajo Stock
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="flex items-center gap-1 w-fit bg-green-50 text-green-700 border-green-200">
-                        <CheckCircle className="w-3 h-3" />
-                        OK
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-gray-600">{ingrediente.proveedor || "-"}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onEdit(ingrediente)}
-                        className="hover:bg-amber-50 hover:text-amber-600"
-                        title="Editar"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onComprar && onComprar(ingrediente)}
-                        className="hover:bg-green-50 hover:text-green-600"
-                        title="Comprar"
-                      >
-                        <ShoppingCart className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onNuevoCosto(ingrediente)}
-                        className="hover:bg-purple-50 hover:text-purple-600"
-                        title="Nuevo costo"
-                      >
-                        <DollarSign className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onVerHistorial(ingrediente)}
-                        className="hover:bg-blue-50 hover:text-blue-600"
-                        title="Historial"
-                      >
-                        <History className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDelete(ingrediente)}
-                        className="hover:bg-red-50 hover:text-red-600"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-    </Card>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="cantidad">
+                Cantidad ({ingrediente?.unidad_medida}) <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="cantidad"
+                name="cantidad"
+                type="number"
+                step="any"
+                min="0.01"
+                required
+                value={formData.cantidad}
+                onChange={handleChange}
+                placeholder="Ej. 10"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="costo_unitario">
+                Costo Unitario ($) <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="costo_unitario"
+                name="costo_unitario"
+                type="number"
+                step="any"
+                min="0.01"
+                required
+                value={formData.costo_unitario}
+                onChange={handleChange}
+                placeholder="Ej. 5.50"
+              />
+            </div>
+          </div>
+
+          <div className="bg-slate-50 p-3 rounded-lg border flex justify-between items-center">
+            <span className="text-sm font-medium text-slate-500">Costo Total Estimado:</span>
+            <span className="text-lg font-bold text-green-600">${costoTotal}</span>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="proveedor">Proveedor</Label>
+            <Input
+              id="proveedor"
+              name="proveedor"
+              value={formData.proveedor}
+              onChange={handleChange}
+              placeholder="Nombre del proveedor"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="numero_factura">Nº Factura / Recibo</Label>
+              <Input
+                id="numero_factura"
+                name="numero_factura"
+                value={formData.numero_factura}
+                onChange={handleChange}
+                placeholder="Opcional"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="metodo_pago">Método de Pago</Label>
+              <select
+                id="metodo_pago"
+                name="metodo_pago"
+                value={formData.metodo_pago}
+                onChange={handleChange}
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="Efectivo">Efectivo</option>
+                <option value="Transferencia">Transferencia</option>
+                <option value="Tarjeta">Tarjeta</option>
+                <option value="Zelle">Zelle</option>
+                <option value="Binance">Binance</option>
+                <option value="Pago Móvil">Pago Móvil</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notas">Notas (Opcional)</Label>
+            <Input
+              id="notas"
+              name="notas"
+              value={formData.notas}
+              onChange={handleChange}
+              placeholder="Detalles adicionales de la compra..."
+            />
+          </div>
+
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isLoading} className="bg-green-600 hover:bg-green-700">
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirmar Compra
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
