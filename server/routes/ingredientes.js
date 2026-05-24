@@ -18,7 +18,7 @@ router.get('/', requireAuth, async (req, res) => {
 
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const { nombre, unidad_medida, costo_por_unidad, costoPorUnidad, cantidad_disponible, cantidadDisponible, cantidad_minima, cantidadMinima } = req.body;
+    const { nombre, unidad_medida, costo_por_unidad, costoPorUnidad, cantidad_disponible, cantidadDisponible, cantidad_minima, cantidadMinima, proveedor } = req.body;
     
     const costo = costo_por_unidad ?? costoPorUnidad;
     const cantidadDisp = cantidad_disponible ?? cantidadDisponible;
@@ -32,7 +32,8 @@ router.post('/', requireAdmin, async (req, res) => {
         unidad_medida: unidad_medida || 'kg',
         costo_por_unidad: parseFloat(costo) ?? 0,
         cantidad_disponible: parseFloat(cantidadDisp) ?? 0,
-        cantidad_minima: parseFloat(cantidadMin) ?? 0
+        cantidad_minima: parseFloat(cantidadMin) ?? 0,
+        proveedor: proveedor || null
       })
       .select()
       .single();
@@ -47,7 +48,7 @@ router.post('/', requireAdmin, async (req, res) => {
 router.put('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, unidad_medida, unidad_receta, factor_conversion, factorConversion, costo_por_unidad, costoPorUnidad, cantidad_disponible, cantidadDisponible, cantidad_minima, cantidadMinima } = req.body;
+    const { nombre, unidad_medida, unidad_receta, factor_conversion, factorConversion, costo_por_unidad, costoPorUnidad, cantidad_disponible, cantidadDisponible, cantidad_minima, cantidadMinima, proveedor } = req.body;
     
     // Obtener ingrediente anterior para historial de costos
     const { data: ingredienteAnterior } = await supabase
@@ -59,17 +60,20 @@ router.put('/:id', requireAdmin, async (req, res) => {
     
     const nuevoCosto = parseFloat(costo_por_unidad ?? costoPorUnidad) ?? 0;
     
+    // Preparar objeto de actualización
+    const updateData = {};
+    if (nombre !== undefined) updateData.nombre = nombre?.trim().toLowerCase();
+    if (unidad_medida !== undefined) updateData.unidad_medida = unidad_medida;
+    if (unidad_receta !== undefined) updateData.unidad_receta = unidad_receta;
+    if (factor_conversion !== undefined || factorConversion !== undefined) updateData.factor_conversion = parseFloat(factor_conversion ?? factorConversion);
+    if (costo_por_unidad !== undefined || costoPorUnidad !== undefined) updateData.costo_por_unidad = nuevoCosto;
+    if (cantidad_disponible !== undefined || cantidadDisponible !== undefined) updateData.cantidad_disponible = parseFloat(cantidad_disponible ?? cantidadDisponible);
+    if (cantidad_minima !== undefined || cantidadMinima !== undefined) updateData.cantidad_minima = parseFloat(cantidad_minima ?? cantidadMinima);
+    if (proveedor !== undefined) updateData.proveedor = proveedor;
+
     const { data, error } = await supabase
       .from('Ingrediente')
-      .update({
-        nombre: nombre?.trim().toLowerCase(),
-        unidad_medida: unidad_medida || 'kg',
-        unidad_receta,
-        factor_conversion: parseFloat(factor_conversion ?? factorConversion) || 1,
-        costo_por_unidad: nuevoCosto,
-        cantidad_disponible: parseFloat(cantidad_disponible ?? cantidadDisponible) ?? 0,
-        cantidad_minima: parseFloat(cantidad_minima ?? cantidadMinima) ?? 0
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
