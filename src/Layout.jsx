@@ -150,13 +150,7 @@ const navigationItems = [
     url: createPageUrl("CuentasPorCobrar"),
     icon: FileText,
     roles: ['administrador']
-  },
-  {
-    title: "Reset Sistema",
-    url: createPageUrl("AdminReset"),
-    icon: AlertTriangle,
-    roles: ['administrador']
-  },
+  }
   ];
 
 export default function Layout({ children, currentPageName }) {
