@@ -82,7 +82,8 @@ export default function ReporteMensual() {
 
       const totales = {
         vDiv: vMes.filter(v => !esBs(v.metodo_pago) && v.metodo_pago !== 'mixto').reduce((s, v) => s + (v.total_venta || 0), 0) + pMes.filter(p => !esBs(p.metodo_pago)).reduce((s, p) => s + (p.monto_pagado || 0), 0),
-        vBs: vMes.filter(v => esBs(v.metodo_pago)).reduce((s, v) => s + (v.total_ves || 0), 0) + pMes.filter(p => esBs(p.metodo_pago)).reduce((s, p) => s + (p.monto_pagado || 0), 0),
+        // Para pagos de créditos en Bs: convertir monto USD * tasa guardada
+        vBs: vMes.filter(v => esBs(v.metodo_pago)).reduce((s, v) => s + (v.total_ves || 0), 0) + pMes.filter(p => esBs(p.metodo_pago)).reduce((s, p) => s + ((p.monto_pagado || 0) * (p.tasa_bs_aplicada || 1)), 0),
         gDiv: gMes.filter(g => !esBs(g.metodo_pago)).reduce((s, g) => s + (g.monto || 0), 0),
         gBs: gMes.filter(g => esBs(g.metodo_pago)).reduce((s, g) => s + (g.monto_original || g.monto || 0), 0),
         aDiv: aMes.filter(a => !esBs(a.metodo_pago)).reduce((s, a) => s + (a.monto || 0), 0),
@@ -110,8 +111,9 @@ export default function ReporteMensual() {
         }
       });
       pMes.forEach(p => {
-        const monto = p.monto_pagado || 0;
         const metodo = p.metodo_pago || 'efectivo_usd';
+        // Para pagos en Bs, convertir usando la tasa guardada
+        const monto = esBs(metodo) ? ((p.monto_pagado || 0) * (p.tasa_bs_aplicada || 1)) : (p.monto_pagado || 0);
         ingresosMetodo[metodo] = {
           total: (ingresosMetodo[metodo]?.total || 0) + monto,
           cant: (ingresosMetodo[metodo]?.cant || 0) + 1

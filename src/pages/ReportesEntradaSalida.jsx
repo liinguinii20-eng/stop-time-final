@@ -54,6 +54,15 @@ export default function ReportesEntradaSalida() {
     queryFn: () => base44.entities.Adelanto.list('-created_date', 1000),
   });
 
+  const { data: pagosCuentas = [], isLoading: loadingPagosCuentas } = useQuery({
+    queryKey: ['pagos-cuentas'],
+    queryFn: async () => {
+      const data = await base44.entities.PagoCuentaPorCobrar.list('-created_date', 1000);
+      console.log('✅ Pagos de créditos cargados para E/S:', data.length);
+      return data;
+    },
+  });
+
   const metodosConfig = {
     efectivo_usd: { label: "💵 Efectivo USD", moneda: "usd", simbolo: "$" },
     binance_usd: { label: "📱 Binance", moneda: "usd", simbolo: "$" },
@@ -111,6 +120,17 @@ export default function ReportesEntradaSalida() {
 
   const gastosFiltrados = [...gastosNormales, ...adelantosFiltrados];
 
+  const pagosCuentasFiltrados = pagosCuentas.filter(p => {
+    try {
+      const fechaP = parseISO(p.fecha_pago || p.createdAt);
+      const inicio = startOfDay(new Date(fechaInicio));
+      const fin = endOfDay(new Date(fechaFin));
+      return fechaP >= inicio && fechaP <= fin;
+    } catch {
+      return false;
+    }
+  });
+
   // Calcular entradas y salidas por método
   const calcularMovimientos = () => {
     const movimientos = {};
@@ -141,6 +161,16 @@ export default function ReportesEntradaSalida() {
         const esBs = pago.metodo_pago.endsWith('_bs');
         movimientos[pago.metodo_pago].entradas += esBs ? (pago.monto_original || 0) : (pago.monto_usd || 0);
         movimientos[pago.metodo_pago].cantidad_entradas += 1;
+      }
+    });
+
+    // ENTRADAS: Pagos de cuentas por cobrar (créditos cobrados)
+    pagosCuentasFiltrados.forEach(pago => {
+      const metodo = pago.metodo_pago || 'efectivo_usd';
+      if (movimientos[metodo]) {
+        const esBs = metodo.endsWith('_bs');
+        movimientos[metodo].entradas += esBs ? (pago.monto_pagado || 0) : (pago.monto_pagado || 0);
+        movimientos[metodo].cantidad_entradas += 1;
       }
     });
 
@@ -221,7 +251,7 @@ export default function ReportesEntradaSalida() {
     toast.success("Reporte exportado exitosamente");
   };
 
-  const isLoading = loadingVentas || loadingPagos || loadingGastos || loadingAdelantos;
+  const isLoading = loadingVentas || loadingPagos || loadingGastos || loadingAdelantos || loadingPagosCuentas;
 
   if (isLoading) {
     return (

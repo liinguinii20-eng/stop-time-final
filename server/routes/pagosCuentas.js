@@ -19,23 +19,33 @@ router.get('/', requireAuth, async (req, res) => {
 
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const { createdAt, metodoPago, ...bodyData } = req.body;
-    
-    if (metodoPago) {
-      bodyData.metodo_pago = metodoPago;
-    }
+    const body = req.body;
+
+    // Robustly extract metodo_pago accepting both camelCase and snake_case
+    const metodo_pago = body.metodo_pago || body.metodoPago || 'efectivo_usd';
+
+    const insertData = {
+      id: body.id || crypto.randomUUID(),
+      cuenta_id: body.cuenta_id || body.cuentaId || null,
+      monto_pagado: parseFloat(body.monto_pagado ?? body.montoPagado ?? 0),
+      metodo_pago,
+      fecha_pago: body.fecha_pago || body.fechaPago || new Date().toISOString(),
+      tasa_bs_aplicada: parseFloat(body.tasa_bs_aplicada ?? body.tasaBsAplicada ?? 0),
+      notas: body.notas ?? body.descripcion ?? '',
+      empleado_nombre: body.empleado_nombre || body.empleadoNombre || 'Sistema'
+    };
+
+    console.log('[PagosCuentas] Insertando pago de crédito:', JSON.stringify(insertData));
 
     const { data, error } = await supabase
       .from('PagoCuentaPorCobrar')
-      .insert({
-        ...bodyData,
-        id: bodyData.id || crypto.randomUUID()
-      })
+      .insert(insertData)
       .select()
       .single();
     if (error) throw error;
     res.json(data);
   } catch (e) {
+    console.error('[PagosCuentas] Error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });

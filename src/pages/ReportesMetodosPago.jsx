@@ -34,12 +34,32 @@ export default function ReportesMetodosPago() {
     },
   });
 
+  const { data: pagosCuentas = [], isLoading: loadingPagosCuentas } = useQuery({
+    queryKey: ['pagos-cuentas'],
+    queryFn: async () => {
+      const data = await base44.entities.PagoCuentaPorCobrar.list('-created_date', 1000);
+      console.log('✅ Pagos de créditos cargados:', data.length);
+      return data;
+    },
+  });
+
   const ventasFiltradas = ventas.filter(v => {
     try {
       const fechaVenta = parseISO(v.fecha_hora);
       const inicio = startOfDay(new Date(fechaInicio));
       const fin = endOfDay(new Date(fechaFin));
       return fechaVenta >= inicio && fechaVenta <= fin;
+    } catch {
+      return false;
+    }
+  });
+
+  const pagosCuentasFiltrados = pagosCuentas.filter(p => {
+    try {
+      const fechaP = parseISO(p.fecha_pago || p.createdAt);
+      const inicio = startOfDay(new Date(fechaInicio));
+      const fin = endOfDay(new Date(fechaFin));
+      return fechaP >= inicio && fechaP <= fin;
     } catch {
       return false;
     }
@@ -92,6 +112,17 @@ export default function ReportesMetodosPago() {
       }
     });
 
+    // Pagos de cuentas por cobrar (créditos)
+    pagosCuentasFiltrados.forEach(pago => {
+      const metodo = pago.metodo_pago || 'efectivo_usd';
+      if (totales[metodo]) {
+        const esBs = metodo.endsWith('_bs');
+        totales[metodo].total_usd += esBs ? 0 : (pago.monto_pagado || 0);
+        totales[metodo].cantidad += 1;
+        totales[metodo].total_original += pago.monto_pagado || 0;
+      }
+    });
+
     return totales;
   };
 
@@ -115,7 +146,7 @@ export default function ReportesMetodosPago() {
   const cantidadTotal = Object.values(totales).reduce((sum, t) => sum + t.cantidad, 0);
   const promedioVenta = cantidadTotal > 0 ? totalGeneral / cantidadTotal : 0;
 
-  const isLoading = loadingVentas || loadingPagos;
+  const isLoading = loadingVentas || loadingPagos || loadingPagosCuentas;
 
   const exportarExcel = () => {
     const rows = [

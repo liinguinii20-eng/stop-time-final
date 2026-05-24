@@ -346,7 +346,7 @@ const normalizeFromServer = (entity, data) => {
   const normalized = { ...data };
   
   // Fix timezone for Postgres timestamp without timezone
-  const dateFields = ['fecha_apertura', 'fecha_cierre', 'fecha_venta', 'created_date', 'createdAt', 'fecha_inicio', 'fecha_fin'];
+  const dateFields = ['fecha_apertura', 'fecha_cierre', 'fecha_venta', 'created_date', 'createdAt', 'fecha_inicio', 'fecha_fin', 'fecha_pago', 'fecha_gasto', 'fecha_adelanto', 'fecha_creacion'];
   dateFields.forEach(field => {
     if (normalized[field] && typeof normalized[field] === 'string' && !normalized[field].endsWith('Z')) {
       normalized[field] += 'Z';
@@ -479,14 +479,16 @@ const normalizeFromServer = (entity, data) => {
   }
   
   // === CAMPOS PARA ADELANTOS ===
-  if (normalized.empleado && !normalized.empleado_nombre) {
-    normalized.empleado_nombre = normalized.empleado;
-  }
-  if (normalized.descripcion && !normalized.notas) {
-    normalized.notas = normalized.descripcion;
-  }
-  if (normalized.fecha && !normalized.fecha_adelanto) {
-    normalized.fecha_adelanto = normalized.fecha;
+  if (entity === 'Adelanto') {
+    if (normalized.empleado && !normalized.empleado_nombre) {
+      normalized.empleado_nombre = normalized.empleado;
+    }
+    if (normalized.descripcion && !normalized.notas) {
+      normalized.notas = normalized.descripcion;
+    }
+    if (normalized.fecha && !normalized.fecha_adelanto) {
+      normalized.fecha_adelanto = normalized.fecha;
+    }
   }
 
   // === CAMPOS PARA GASTOS ===
@@ -761,6 +763,42 @@ export const api = {
               return normalizeFromServer(entity, result);
             }
 
+            // Manejo especial para PagoCuentaPorCobrar
+            if (entity === 'PagoCuentaPorCobrar') {
+              const result = await serverFetch('/pagocuentaporcobrars', {
+                method: 'POST',
+                body: JSON.stringify({
+                  cuenta_id: data.cuenta_id,
+                  monto_pagado: parseFloat(data.monto_pagado) || 0,
+                  metodo_pago: data.metodo_pago || 'efectivo_usd',
+                  fecha_pago: data.fecha_pago || new Date().toISOString(),
+                  tasa_bs_aplicada: parseFloat(data.tasa_bs_aplicada) || 0,
+                  notas: data.notas || '',
+                  empleado_nombre: data.empleado_nombre || 'Sistema'
+                })
+              });
+              return normalizeFromServer(entity, result);
+            }
+
+            // Manejo especial para CuentaPorCobrar update via create
+            if (entity === 'CuentaPorCobrar') {
+              const result = await serverFetch('/cuentaporcobrars', {
+                method: 'POST',
+                body: JSON.stringify({
+                  id: normalized.id,
+                  clienteNombre: data.clienteNombre || data.cliente_nombre,
+                  empleadoId: data.empleadoId || data.empleado_id,
+                  monto: data.monto,
+                  monto_total: data.monto_total,
+                  monto_pendiente: data.monto_pendiente,
+                  estado: data.estado || 'pendiente',
+                  comanda_numero: data.comanda_numero,
+                  cliente_telefono: data.cliente_telefono
+                })
+              });
+              return normalizeFromServer(entity, result);
+            }
+
             // Usar endpoint directo para otras entidades
             const result = await serverFetch(endpointMap[entity] || `/${entity.toLowerCase()}s`, {
               method: 'POST',
@@ -875,6 +913,21 @@ export const api = {
               return normalizeFromServer(entity, result);
             }
             
+            // Manejo especial para CuentaPorCobrar
+            if (entity === 'CuentaPorCobrar') {
+              const result = await serverFetch(`/cuentaporcobrars/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                  monto_pendiente: data.monto_pendiente,
+                  estado: data.estado,
+                  clienteNombre: data.clienteNombre || data.cliente_nombre,
+                  monto_total: data.monto_total,
+                  comanda_numero: data.comanda_numero
+                })
+              });
+              return normalizeFromServer(entity, result);
+            }
+
             // Usar endpoint directo para otras entidades
             const result = await serverFetch(`${endpointMap[entity] || `/${entity.toLowerCase()}s`}/${id}`, {
               method: 'PUT',

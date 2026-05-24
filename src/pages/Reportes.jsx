@@ -152,7 +152,18 @@ export default function Reportes() {
     }
   });
 
-  const totalVentasHoy = ventasHoy.reduce((sum, v) => sum + (v.total_venta || 0), 0);
+  // Pagos de créditos de HOY
+  const pagosCuentasHoy = pagosCuentas.filter(p => {
+    try {
+      const fechaP = parseISO(p.fecha_pago || p.createdAt);
+      return isToday(fechaP);
+    } catch (error) {
+      return false;
+    }
+  });
+
+  const totalVentasHoy = ventasHoy.reduce((sum, v) => sum + (v.total_venta || 0), 0)
+    + pagosCuentasHoy.filter(p => !metodosBolivares(p.metodo_pago)).reduce((sum, p) => sum + (p.monto_pagado || 0), 0);
 
   // Filtrar por rango de fechas seleccionado
   const ventasFiltradas = ventas.filter(v => {
@@ -238,7 +249,8 @@ export default function Reportes() {
   const netoDivisas = totalVentasDivisas - totalGastosDivisas;
 
   // ── BOLÍVARES (Bs) ──
-  const totalVentasBolivares = ventasFiltradas.filter(v => metodosBolivares(v.metodo_pago)).reduce((sum, v) => sum + (v.total_ves || 0), 0) + pagosCuentasFiltrados.filter(p => metodosBolivares(p.metodo_pago)).reduce((sum, p) => sum + (p.monto_pagado || 0), 0);
+  // Para pagos de créditos en Bs, convertir monto USD * tasa guardada
+  const totalVentasBolivares = ventasFiltradas.filter(v => metodosBolivares(v.metodo_pago)).reduce((sum, v) => sum + (v.total_ves || 0), 0) + pagosCuentasFiltrados.filter(p => metodosBolivares(p.metodo_pago)).reduce((sum, p) => sum + ((p.monto_pagado || 0) * (p.tasa_bs_aplicada || 1)), 0);
   const totalGastosBolivares = gastosFiltrados.filter(g => metodosBolivares(g.metodo_pago)).reduce((sum, g) => sum + (g.monto_original || g.monto || 0), 0);
   const netoBolivares = totalVentasBolivares - totalGastosBolivares;
 
@@ -277,6 +289,13 @@ export default function Reportes() {
         format(parseISO(v.fecha_hora), "dd/MM/yyyy HH:mm", { locale: es }),
         v.metodo_pago,
         formatMonto(v)
+      ]),
+      ...pagosCuentasFiltrados.map(p => [
+        format(parseISO(p.fecha_pago || p.createdAt), "dd/MM/yyyy HH:mm", { locale: es }),
+        `Pago Deuda: ${p.metodo_pago}`,
+        metodosBolivares(p.metodo_pago) 
+          ? `Bs ${((p.monto_pagado || 0) * (p.tasa_bs_aplicada || 1)).toFixed(2)}`
+          : `$${(p.monto_pagado || 0).toFixed(2)}`
       ]),
       [],
       ["DETALLE DE GASTOS"],
@@ -359,7 +378,7 @@ export default function Reportes() {
               </div>
             </div>
             <div className="text-left sm:text-right">
-              <p className="text-emerald-300 text-sm font-medium">{ventasHoy.length} ventas</p>
+              <p className="text-emerald-300 text-sm font-medium">{ventasHoy.length} ventas{pagosCuentasHoy.length > 0 ? ` + ${pagosCuentasHoy.length} cobros` : ''}</p>
               <p className="text-2xl font-black text-emerald-400">${totalVentasHoy.toFixed(2)}</p>
             </div>
           </div>
@@ -508,7 +527,7 @@ export default function Reportes() {
                           </TableCell>
                           <TableCell className="text-right font-bold text-emerald-400">
                             {metodosBolivares(pago.metodo_pago) 
-                              ? `Bs ${(pago.monto_pagado || 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
+                              ? `Bs ${((pago.monto_pagado || 0) * (pago.tasa_bs_aplicada || 1)).toLocaleString('es-VE', { minimumFractionDigits: 2 })}`
                               : `$${(pago.monto_pagado || 0).toFixed(2)}`
                             }
                           </TableCell>
