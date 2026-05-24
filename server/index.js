@@ -35,6 +35,7 @@ import pagosMixtosRoutes from './routes/pagosMixtos.js';
 import mantenimientoRoutes from './routes/mantenimiento.js';
 import cuentasPorCobrarRoutes from './routes/cuentasPorCobrar.js';
 import pagosCuentasRoutes from './routes/pagosCuentas.js';
+import cierreTrimestralRoutes from './routes/cierreTrimestral.js';
 import { addClient } from './services/cocinaEvents.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -87,6 +88,7 @@ app.use('/api/pagomixtos', pagosMixtosRoutes);
 app.use('/api/mantenimiento', mantenimientoRoutes);
 app.use('/api/cuentaporcobrars', cuentasPorCobrarRoutes);
 app.use('/api/pagocuentaporcobrars', pagosCuentasRoutes);
+app.use('/api/cierre-trimestral', cierreTrimestralRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
