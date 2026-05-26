@@ -106,19 +106,18 @@ router.post('/', requireAdmin, async (req, res) => {
       }
 
       if (movType === 'CREDITO_EMPLEADO') {
-        // Crear Cuenta por Cobrar
-        const cxcId = crypto.randomUUID();
-        const { error: cxcErr } = await supabase.from('CuentaPorCobrar').insert({
-          id: cxcId,
-          clienteNombre: `Empleado: ${empleado_nombre || 'Desconocido'}`,
+        // Crear Adelanto en lugar de Cuenta por Cobrar
+        const adelantoId = crypto.randomUUID();
+        const { error: adlErr } = await supabase.from('Adelanto').insert({
+          id: adelantoId,
           empleadoId: empleado_id,
+          empleado: empleado_nombre || 'Desconocido',
           monto: finalTotal,
-          monto_total: finalTotal,
-          monto_pendiente: finalTotal,
-          comanda_numero: numero_comanda,
-          estado: 'pendiente'
+          descripcion: `Consumo interno (Comanda #${numero_comanda})`,
+          estado: 'PENDIENTE',
+          fecha: new Date().toISOString()
         });
-        if (cxcErr) console.error("Error creando CxC para empleado:", cxcErr);
+        if (adlErr) console.error("Error creando Adelanto para empleado:", adlErr);
       }
       
       return res.json({ ...comanda, detalles: detallesCreados, isSpecialMode: true });

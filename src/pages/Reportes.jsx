@@ -73,6 +73,12 @@ function VentaDetallada({ venta, detalles }) {
   );
 }
 
+const metodosBolivares = (metodo) => metodo && metodo.endsWith('_bs');
+const metodosCOP = (metodo) => metodo && metodo.endsWith('_cop');
+const metodosEfectivoUSD = (metodo) => metodo === 'efectivo_usd';
+const metodosDivisas = (metodo) => metodo && !metodo.endsWith('_bs') && !metodo.endsWith('_cop') && !['cuentas_por_cobrar', 'mixto'].includes(metodo);
+const metodosDigitalesUSD = (metodo) => metodo && !metodo.endsWith('_bs') && !metodo.endsWith('_cop') && metodo !== 'efectivo_usd' && !['cuentas_por_cobrar', 'mixto'].includes(metodo);
+
 export default function Reportes() {
   const [fechaInicio, setFechaInicio] = useState(format(new Date(), "yyyy-MM-dd"));
   const [fechaFin, setFechaFin] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -227,10 +233,6 @@ export default function Reportes() {
   const gastosFiltrados = [...gastosNormales, ...adelantosFiltrados];
 
   // Separar flujos por moneda - 3 grupos claros
-  const metodosBolivares = (metodo) => metodo && metodo.endsWith('_bs');
-  const metodosCOP = (metodo) => metodo && metodo.endsWith('_cop');
-  const metodosEfectivoUSD = (metodo) => metodo === 'efectivo_usd';
-  const metodosDivisas = (metodo) => metodo && !metodo.endsWith('_bs') && !metodo.endsWith('_cop') && !['cuentas_por_cobrar', 'mixto'].includes(metodo);
 
   // ── CAJA EFECTIVO USD (solo cash físico) ──
   const totalVentasEfectivo = ventasFiltradas.filter(v => metodosEfectivoUSD(v.metodo_pago)).reduce((sum, v) => sum + (v.total_venta || 0), 0) + pagosCuentasFiltrados.filter(p => metodosEfectivoUSD(p.metodo_pago)).reduce((sum, p) => sum + (p.monto_pagado || 0), 0);
@@ -238,7 +240,6 @@ export default function Reportes() {
   const netoEfectivo = totalVentasEfectivo - totalGastosEfectivo;
 
   // ── DIVISAS DIGITALES (Binance, Zinli, PayPal, Zelle) ──
-  const metodosDigitalesUSD = (metodo) => metodo && !metodo.endsWith('_bs') && !metodo.endsWith('_cop') && metodo !== 'efectivo_usd' && !['cuentas_por_cobrar', 'mixto'].includes(metodo);
   const totalVentasDigitales = ventasFiltradas.filter(v => metodosDigitalesUSD(v.metodo_pago)).reduce((sum, v) => sum + (v.total_venta || 0), 0) + pagosCuentasFiltrados.filter(p => metodosDigitalesUSD(p.metodo_pago)).reduce((sum, p) => sum + (p.monto_pagado || 0), 0);
   const totalGastosDigitales = gastosFiltrados.filter(g => metodosDigitalesUSD(g.metodo_pago)).reduce((sum, g) => sum + (g.monto || 0), 0);
   const netoDigitales = totalVentasDigitales - totalGastosDigitales;
