@@ -222,6 +222,7 @@ model Nomina {
   periodo_fin      DateTime?
   salario_base     Float    @default(0)
   total_adelantos  Float    @default(0)
+  total_cuentas    Float    @default(0)
   salario_neto     Float    @default(0)
   metodo_pago      String?
   moneda_pago      String?  @default("USD")
