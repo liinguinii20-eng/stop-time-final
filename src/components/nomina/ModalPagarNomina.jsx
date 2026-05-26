@@ -34,7 +34,31 @@ export default function ModalPagarNomina({ open, onClose, previewData, onConfirm
   const [periodoFin, setPeriodoFin] = useState('');
   const [notas, setNotas] = useState('');
 
-  const { empleado, adelantos = [], totalAdelantos, cuentas = [], totalCuentas, salarioNeto, tasa } = previewData ?? {};
+  const { empleado, adelantos = [], cuentas = [], tasa } = previewData ?? {};
+
+  const [valoresAdelantos, setValoresAdelantos] = useState({});
+  const [valoresCuentas, setValoresCuentas] = useState({});
+
+  useEffect(() => {
+    if (previewData) {
+      const initialAdelantos = {};
+      (previewData.adelantos || []).forEach(a => {
+        initialAdelantos[a.id] = a.monto_pendiente ?? a.monto ?? 0;
+      });
+      setValoresAdelantos(initialAdelantos);
+
+      const initialCuentas = {};
+      (previewData.cuentas || []).forEach(c => {
+        initialCuentas[c.id] = c.monto_pendiente ?? c.monto ?? 0;
+      });
+      setValoresCuentas(initialCuentas);
+    }
+  }, [previewData]);
+
+  // Totales dinámicos
+  const totalAdelantosDinamico = useMemo(() => Object.values(valoresAdelantos).reduce((sum, val) => sum + (Number(val) || 0), 0), [valoresAdelantos]);
+  const totalCuentasDinamico = useMemo(() => Object.values(valoresCuentas).reduce((sum, val) => sum + (Number(val) || 0), 0), [valoresCuentas]);
+  const salarioNetoDinamico = (empleado?.salario_base ?? 0) - totalAdelantosDinamico - totalCuentasDinamico;
 
   // Autoselect currency based on payment method
   useEffect(() => {
@@ -46,7 +70,7 @@ export default function ModalPagarNomina({ open, onClose, previewData, onConfirm
 
   // Calculate conversion
   const conversion = useMemo(() => {
-    const neto = salarioNeto ?? 0;
+    const neto = salarioNetoDinamico;
     if (monedaPago === 'USD') {
       return { monto: neto, tasa: 1 };
     }
@@ -57,18 +81,26 @@ export default function ModalPagarNomina({ open, onClose, previewData, onConfirm
       return { monto: neto * tasa.tasa_cop_usd, tasa: tasa.tasa_cop_usd };
     }
     return { monto: neto, tasa: 1 };
-  }, [salarioNeto, monedaPago, tasa]);
+  }, [salarioNetoDinamico, monedaPago, tasa]);
 
   const handleConfirmar = () => {
     onConfirmar({
       empleado_id: empleado?.id,
       empleado_nombre: empleado?.nombre,
       salario_base: empleado?.salario_base ?? 0,
-      adelanto_ids: adelantos.map(a => a.id),
-      total_adelantos: totalAdelantos ?? 0,
-      cuenta_ids: cuentas.map(c => c.id),
-      total_cuentas: totalCuentas ?? 0,
-      salario_neto: salarioNeto ?? 0,
+      adelantos_a_descontar: adelantos.map(a => ({
+        id: a.id,
+        monto_a_descontar: Number(valoresAdelantos[a.id]) || 0,
+        monto_pendiente_original: a.monto_pendiente ?? a.monto ?? 0
+      })),
+      total_adelantos: totalAdelantosDinamico,
+      cuentas_a_descontar: cuentas.map(c => ({
+        id: c.id,
+        monto_a_descontar: Number(valoresCuentas[c.id]) || 0,
+        monto_pendiente_original: c.monto_pendiente ?? c.monto ?? 0
+      })),
+      total_cuentas: totalCuentasDinamico,
+      salario_neto: salarioNetoDinamico,
       metodo_pago: metodoPago,
       moneda_pago: monedaPago,
       tasa_cambio: conversion.tasa,
@@ -80,7 +112,7 @@ export default function ModalPagarNomina({ open, onClose, previewData, onConfirm
   };
 
   const monedaInfo = MONEDAS[monedaPago] ?? MONEDAS.USD;
-  const isNetoNegativo = (salarioNeto ?? 0) < 0;
+  const isNetoNegativo = salarioNetoDinamico < 0;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -131,20 +163,42 @@ export default function ModalPagarNomina({ open, onClose, previewData, onConfirm
                   <TrendingDown className="w-3.5 h-3.5" />
                   Adelantos a descontar ({adelantos.length})
                 </p>
-                {adelantos.map((a, i) => (
-                  <div key={a.id || i} className="flex justify-between items-center pl-4 text-sm">
-                    <span className="text-gray-500 truncate max-w-[60%]">
-                      {a.descripcion || a.empleado || `Adelanto ${i + 1}`}
-                      <span className="text-gray-300 ml-1 text-xs">
-                        {a.fecha ? format(new Date(a.fecha), 'dd/MM', { locale: es }) : ''}
-                      </span>
-                    </span>
-                    <span className="font-semibold text-amber-600">-${(a.monto ?? 0).toFixed(2)}</span>
-                  </div>
-                ))}
+                {adelantos.map((a, i) => {
+                  const maxVal = a.monto_pendiente ?? a.monto ?? 0;
+                  return (
+                    <div key={a.id || i} className="flex flex-col sm:flex-row sm:justify-between sm:items-center pl-4 text-sm gap-2">
+                      <div className="text-gray-500 truncate max-w-[80%] sm:max-w-[50%] flex flex-col">
+                        <span>{a.descripcion || a.empleado || `Adelanto ${i + 1}`}</span>
+                        <span className="text-gray-400 text-[10px]">
+                          Pendiente: ${maxVal.toFixed(2)} {a.fecha ? `• ${format(new Date(a.fecha), 'dd/MM', { locale: es })}` : ''}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 self-start sm:self-auto">
+                        <span className="text-gray-400 font-medium text-xs">A descontar:</span>
+                        <div className="relative w-24">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs">$</span>
+                          <Input 
+                            type="number"
+                            min="0"
+                            max={maxVal}
+                            step="0.01"
+                            value={valoresAdelantos[a.id] ?? ''}
+                            onChange={(e) => {
+                              let val = e.target.value;
+                              if (Number(val) > maxVal) val = maxVal;
+                              if (Number(val) < 0) val = 0;
+                              setValoresAdelantos({...valoresAdelantos, [a.id]: val});
+                            }}
+                            className="pl-6 h-8 text-xs font-semibold text-right"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
                 <div className="flex justify-between items-center pl-4 border-t border-dashed border-gray-200 pt-2">
                   <span className="text-sm font-medium text-gray-600">Total descontado</span>
-                  <span className="font-bold text-amber-700">-${(totalAdelantos ?? 0).toFixed(2)}</span>
+                  <span className="font-bold text-amber-700">-${totalAdelantosDinamico.toFixed(2)}</span>
                 </div>
               </div>
             )}
@@ -156,20 +210,42 @@ export default function ModalPagarNomina({ open, onClose, previewData, onConfirm
                   <TrendingDown className="w-3.5 h-3.5" />
                   Créditos a descontar ({cuentas.length})
                 </p>
-                {cuentas.map((c, i) => (
-                  <div key={c.id || i} className="flex justify-between items-center pl-4 text-sm">
-                    <span className="text-gray-500 truncate max-w-[60%]">
-                      {c.comanda_numero ? `Comanda #${c.comanda_numero}` : `Crédito ${i + 1}`}
-                      <span className="text-gray-300 ml-1 text-xs">
-                        {c.fecha_creacion ? format(new Date(c.fecha_creacion), 'dd/MM', { locale: es }) : ''}
-                      </span>
-                    </span>
-                    <span className="font-semibold text-rose-600">-${(c.monto_pendiente ?? c.monto ?? 0).toFixed(2)}</span>
-                  </div>
-                ))}
+                {cuentas.map((c, i) => {
+                  const maxVal = c.monto_pendiente ?? c.monto ?? 0;
+                  return (
+                    <div key={c.id || i} className="flex flex-col sm:flex-row sm:justify-between sm:items-center pl-4 text-sm gap-2">
+                      <div className="text-gray-500 truncate max-w-[80%] sm:max-w-[50%] flex flex-col">
+                        <span>{c.comanda_numero ? `Comanda #${c.comanda_numero}` : `Crédito ${i + 1}`}</span>
+                        <span className="text-gray-400 text-[10px]">
+                          Pendiente: ${maxVal.toFixed(2)} {c.fecha_creacion ? `• ${format(new Date(c.fecha_creacion), 'dd/MM', { locale: es })}` : ''}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 self-start sm:self-auto">
+                        <span className="text-gray-400 font-medium text-xs">A descontar:</span>
+                        <div className="relative w-24">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs">$</span>
+                          <Input 
+                            type="number"
+                            min="0"
+                            max={maxVal}
+                            step="0.01"
+                            value={valoresCuentas[c.id] ?? ''}
+                            onChange={(e) => {
+                              let val = e.target.value;
+                              if (Number(val) > maxVal) val = maxVal;
+                              if (Number(val) < 0) val = 0;
+                              setValoresCuentas({...valoresCuentas, [c.id]: val});
+                            }}
+                            className="pl-6 h-8 text-xs font-semibold text-right border-rose-200 focus-visible:ring-rose-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
                 <div className="flex justify-between items-center pl-4 border-t border-dashed border-gray-200 pt-2">
                   <span className="text-sm font-medium text-gray-600">Total créditos</span>
-                  <span className="font-bold text-rose-700">-${(totalCuentas ?? 0).toFixed(2)}</span>
+                  <span className="font-bold text-rose-700">-${totalCuentasDinamico.toFixed(2)}</span>
                 </div>
               </div>
             )}
@@ -179,7 +255,7 @@ export default function ModalPagarNomina({ open, onClose, previewData, onConfirm
               <div className="flex justify-between items-center">
                 <span className="font-bold text-gray-800">NETO A PAGAR</span>
                 <span className={`font-black text-2xl ${isNetoNegativo ? 'text-red-600' : 'text-violet-700'}`}>
-                  ${(salarioNeto ?? 0).toFixed(2)}
+                  ${salarioNetoDinamico.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -253,7 +329,7 @@ export default function ModalPagarNomina({ open, onClose, previewData, onConfirm
               <div className="flex items-center justify-between gap-3">
                 <div className="text-center flex-1">
                   <p className="text-xs text-gray-500">Monto USD</p>
-                  <p className="font-bold text-lg text-gray-900">${(salarioNeto ?? 0).toFixed(2)}</p>
+                  <p className="font-bold text-lg text-gray-900">${salarioNetoDinamico.toFixed(2)}</p>
                 </div>
                 <div className="flex flex-col items-center gap-1 text-violet-400">
                   <ArrowRight className="w-5 h-5" />

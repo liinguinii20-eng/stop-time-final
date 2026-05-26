@@ -111,6 +111,8 @@ model Adelanto {
   empleadoId String?
   empleado   String?
   monto      Float
+  monto_pendiente Float?
+  monto_descontado Float? @default(0)
   monto_original  Float?
   moneda_original String?
   tasa_cambio     Float?
@@ -190,6 +192,7 @@ model CuentaPorCobrar {
   monto         Float
   monto_total   Float?   @default(0)
   monto_pendiente Float? @default(0)
+  monto_descontado Float? @default(0)
   estado        String   @default("pendiente")
   fecha_creacion DateTime @default(now())
   vencimiento   DateTime?

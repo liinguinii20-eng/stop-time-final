@@ -36,24 +36,24 @@ router.get('/preview/:empleadoId', requireAuth, async (req, res) => {
     if (empError) throw empError;
     if (!empleado) return res.status(404).json({ error: 'Empleado no encontrado' });
 
-    // 2. Obtener adelantos PENDIENTES de este empleado
+    // 2. Obtener adelantos PENDIENTES, PARCIALES o POSPUESTOS de este empleado
     const { data: adelantos, error: adelError } = await supabase
       .from('Adelanto')
       .select('*')
       .eq('empleadoId', empleadoId)
-      .eq('estado', 'PENDIENTE')
+      .in('estado', ['PENDIENTE', 'PARCIAL', 'POSPUESTO'])
       .order('fecha', { ascending: true });
     if (adelError) throw adelError;
 
-    const totalAdelantos = (adelantos ?? []).reduce((sum, a) => sum + (a.monto ?? 0), 0);
+    const totalAdelantos = (adelantos ?? []).reduce((sum, a) => sum + (a.monto_pendiente ?? a.monto ?? 0), 0);
     const salarioBase = empleado.salario_base ?? 0;
     
-    // 2.5 Obtener cuentas por cobrar (créditos) PENDIENTES de este empleado
+    // 2.5 Obtener cuentas por cobrar (créditos) PENDIENTES, PARCIALES o POSPUESTOS de este empleado
     const { data: cuentas, error: cuentasError } = await supabase
       .from('CuentaPorCobrar')
       .select('*')
       .eq('empleadoId', empleadoId)
-      .eq('estado', 'pendiente')
+      .in('estado', ['pendiente', 'PARCIAL', 'POSPUESTO'])
       .order('fecha_creacion', { ascending: true });
     if (cuentasError) throw cuentasError;
 
@@ -102,9 +102,9 @@ router.post('/pagar', requireAdmin, async (req, res) => {
       empleado_id,
       empleado_nombre,
       salario_base,
-      adelanto_ids = [],       // IDs de adelantos a descontar
+      adelantos_a_descontar = [], // Array de objetos { id, monto_a_descontar, monto_pendiente_original }
       total_adelantos,
-      cuenta_ids = [],         // IDs de cuentas por cobrar a descontar
+      cuentas_a_descontar = [], // Array de objetos { id, monto_a_descontar, monto_pendiente_original }
       total_cuentas,
       salario_neto,
       metodo_pago,             // efectivo_usd, zelle, binance, nequi, pago_movil, etc.
@@ -149,53 +149,97 @@ router.post('/pagar', requireAdmin, async (req, res) => {
       .single();
     if (nomError) throw nomError;
 
-    // 2. Marcar adelantos como DESCONTADO
-    if (adelanto_ids.length > 0) {
-      const { error: adelError } = await supabase
-        .from('Adelanto')
-        .update({
-          estado: 'DESCONTADO',
-          fecha_descuento: now,
-          nomina_id: nominaId,
-        })
-        .in('id', adelanto_ids);
-      if (adelError) {
-        console.error('Error actualizando adelantos:', adelError);
-        // No bloquear el pago por esto
+    // 2. Actualizar adelantos según el pago parcial o total
+    if (adelantos_a_descontar.length > 0) {
+      for (const ad of adelantos_a_descontar) {
+        const monto_descontado_ahora = ad.monto_a_descontar || 0;
+        const monto_pendiente_anterior = ad.monto_pendiente_original || 0;
+        
+        let nuevo_estado;
+        let nuevo_monto_pendiente = monto_pendiente_anterior - monto_descontado_ahora;
+        
+        // Obtener el adelanto actual para saber cuánto se había descontado antes (si es necesario)
+        const { data: currentAd } = await supabase.from('Adelanto').select('monto_descontado').eq('id', ad.id).single();
+        const monto_descontado_previo = currentAd?.monto_descontado || 0;
+        const nuevo_monto_descontado_total = monto_descontado_previo + monto_descontado_ahora;
+
+        if (monto_descontado_ahora === 0) {
+          nuevo_estado = 'POSPUESTO';
+          nuevo_monto_pendiente = monto_pendiente_anterior;
+        } else if (nuevo_monto_pendiente <= 0) {
+          nuevo_estado = 'DESCONTADO';
+          nuevo_monto_pendiente = 0;
+        } else {
+          nuevo_estado = 'PARCIAL';
+        }
+
+        const { error: adelError } = await supabase
+          .from('Adelanto')
+          .update({
+            estado: nuevo_estado,
+            monto_pendiente: nuevo_monto_pendiente,
+            monto_descontado: nuevo_monto_descontado_total,
+            fecha_descuento: now,
+            nomina_id: nominaId,
+          })
+          .eq('id', ad.id);
+          
+        if (adelError) {
+          console.error(`Error actualizando adelanto ${ad.id}:`, adelError);
+        }
       }
     }
 
-    // 2.5 Marcar cuentas por cobrar como PAGADA
-    if (cuenta_ids.length > 0) {
-      // Create payment history for these accounts
-      const pagosCuentas = cuenta_ids.map(cuentaId => ({
-        id: crypto.randomUUID(),
-        cuenta_id: cuentaId,
-        cuentaId: cuentaId,
-        monto: 0, // Since we don't have the exact split easily, or we can fetch them to record accurate amounts, but this is simple
-        metodo: 'descuento_nomina',
-        metodo_pago: 'descuento_nomina',
-        fecha: now,
-        fecha_pago: now,
-        notas: `Descuento por nómina (Nomina ID: ${nominaId})`,
-        empleado_nombre: empleado_nombre ?? 'Sistema'
-      }));
-
-      // Update the accounts
-      const { error: cuentaError } = await supabase
-        .from('CuentaPorCobrar')
-        .update({
-          estado: 'pagada',
-          monto_pendiente: 0
-        })
-        .in('id', cuenta_ids);
+    // 2.5 Marcar cuentas por cobrar según pago parcial o total
+    if (cuentas_a_descontar.length > 0) {
+      for (const cta of cuentas_a_descontar) {
+        const monto_descontado_ahora = cta.monto_a_descontar || 0;
+        const monto_pendiente_anterior = cta.monto_pendiente_original || 0;
         
-      if (cuentaError) {
-        console.error('Error actualizando cuentas por cobrar:', cuentaError);
-      } else {
-        // Now we can fetch their previous amounts if needed, or just not specify monto in pago
-        // Let's just insert to log
-        await supabase.from('PagoCuentaPorCobrar').insert(pagosCuentas);
+        let nuevo_estado;
+        let nuevo_monto_pendiente = monto_pendiente_anterior - monto_descontado_ahora;
+        
+        const { data: currentCta } = await supabase.from('CuentaPorCobrar').select('monto_descontado').eq('id', cta.id).single();
+        const monto_descontado_previo = currentCta?.monto_descontado || 0;
+        const nuevo_monto_descontado_total = monto_descontado_previo + monto_descontado_ahora;
+
+        if (monto_descontado_ahora === 0) {
+          nuevo_estado = 'POSPUESTO'; // O 'pendiente' si POSPUESTO no existe en frontend para cuentas, pero usaremos POSPUESTO
+          nuevo_monto_pendiente = monto_pendiente_anterior;
+        } else if (nuevo_monto_pendiente <= 0) {
+          nuevo_estado = 'pagada';
+          nuevo_monto_pendiente = 0;
+        } else {
+          nuevo_estado = 'PARCIAL';
+        }
+
+        const { error: cuentaError } = await supabase
+          .from('CuentaPorCobrar')
+          .update({
+            estado: nuevo_estado,
+            monto_pendiente: nuevo_monto_pendiente,
+            monto_descontado: nuevo_monto_descontado_total
+          })
+          .eq('id', cta.id);
+          
+        if (cuentaError) {
+          console.error(`Error actualizando cuenta por cobrar ${cta.id}:`, cuentaError);
+        } else if (monto_descontado_ahora > 0) {
+          // Log payment
+          await supabase.from('PagoCuentaPorCobrar').insert({
+            id: crypto.randomUUID(),
+            cuenta_id: cta.id,
+            cuentaId: cta.id,
+            monto: monto_descontado_ahora,
+            monto_pagado: monto_descontado_ahora,
+            metodo: 'descuento_nomina',
+            metodo_pago: 'descuento_nomina',
+            fecha: now,
+            fecha_pago: now,
+            notas: `Descuento por nómina (Nomina ID: ${nominaId})`,
+            empleado_nombre: empleado_nombre ?? 'Sistema'
+          });
+        }
       }
     }
 
@@ -225,7 +269,7 @@ router.post('/pagar', requireAdmin, async (req, res) => {
     res.json({
       success: true,
       nomina,
-      adelantos_descontados: adelanto_ids.length,
+      adelantos_descontados: adelantos_a_descontar.length,
       egreso_registrado: true,
     });
   } catch (e) {
@@ -247,12 +291,22 @@ router.delete('/:id', requireAdmin, async (req, res) => {
       .single();
 
     if (nomina) {
-      // Revertir adelantos asociados a estado PENDIENTE
-      const { error: revertError } = await supabase
-        .from('Adelanto')
-        .update({ estado: 'PENDIENTE', fecha_descuento: null, nomina_id: null })
-        .eq('nomina_id', id);
-      if (revertError) console.error('Error revirtiendo adelantos:', revertError);
+      // Revertir adelantos asociados a esta nómina a estado PENDIENTE/PARCIAL
+      // Not perfect for partials because we don't track history of partial payments, but sets them back to pending
+      // Ideal way: we should revert monto_pendiente and monto_descontado. 
+      // For now, reset to PENDIENTE and assume the whole amount is pending again (simple fallback).
+      const { data: adelantosRevert } = await supabase.from('Adelanto').select('*').eq('nomina_id', id);
+      if (adelantosRevert && adelantosRevert.length > 0) {
+        for (const ad of adelantosRevert) {
+          await supabase.from('Adelanto').update({
+            estado: 'PENDIENTE',
+            monto_pendiente: ad.monto_pendiente + ad.monto_descontado, // simplistic revert
+            monto_descontado: 0,
+            fecha_descuento: null,
+            nomina_id: null
+          }).eq('id', ad.id);
+        }
+      }
     }
 
     // Marcar como anulada (no eliminar para auditoría)

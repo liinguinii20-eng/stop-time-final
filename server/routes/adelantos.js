@@ -32,6 +32,8 @@ router.post('/', requireAdmin, async (req, res) => {
         empleadoId: finalEmpleadoId,
         empleado: empleado || empleado_nombre || 'Sin nombre',
         monto: monto || 0,
+        monto_pendiente: monto || 0,
+        monto_descontado: 0,
         monto_original: monto_original || montoOriginal || null,
         moneda_original: moneda_original || monedaOriginal || null,
         tasa_cambio: tasa_cambio || null,

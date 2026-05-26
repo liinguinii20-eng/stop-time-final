@@ -113,6 +113,8 @@ router.post('/', requireAdmin, async (req, res) => {
           empleadoId: empleado_id,
           empleado: empleado_nombre || 'Desconocido',
           monto: finalTotal,
+          monto_pendiente: finalTotal,
+          monto_descontado: 0,
           descripcion: `Consumo interno (Comanda #${numero_comanda})`,
           estado: 'PENDIENTE',
           fecha: new Date().toISOString()
