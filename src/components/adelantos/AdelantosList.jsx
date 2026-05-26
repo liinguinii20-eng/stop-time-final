@@ -35,8 +35,8 @@ export default function AdelantosList({ adelantos, onEdit, onDelete, onMarcarDes
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="font-bold text-lg">{adelanto.empleado_nombre}</h3>
-                  <Badge variant={adelanto.estado === "descontado" ? "default" : "secondary"}>
-                    {adelanto.estado === "descontado" ? "Descontado" : "Pendiente"}
+                  <Badge variant={adelanto.estado?.toLowerCase() === "descontado" ? "default" : "secondary"}>
+                    {adelanto.estado?.toLowerCase() === "descontado" ? "Descontado" : "Pendiente"}
                   </Badge>
                 </div>
                 
@@ -64,9 +64,9 @@ export default function AdelantosList({ adelantos, onEdit, onDelete, onMarcarDes
                   )}
                 </div>
               </div>
-
+ 
               <div className="flex gap-2">
-                {adelanto.estado === "pendiente" && (
+                {adelanto.estado?.toLowerCase() === "pendiente" && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -79,7 +79,7 @@ export default function AdelantosList({ adelantos, onEdit, onDelete, onMarcarDes
                   size="sm"
                   variant="outline"
                   onClick={() => onEdit(adelanto)}
-                  disabled={adelanto.estado === "descontado"}
+                  disabled={adelanto.estado?.toLowerCase() === "descontado"}
                 >
                   <Edit className="w-4 h-4" />
                 </Button>

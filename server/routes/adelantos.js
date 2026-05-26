@@ -20,12 +20,15 @@ router.get('/', requireAuth, async (req, res) => {
 
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const { empleado_id, empleado, empleado_nombre, monto, monto_original, montoOriginal, moneda_original, monedaOriginal, tasa_cambio, descripcion, notas, fecha, fecha_adelanto, metodo_pago, metodoPago } = req.body;
+    const { empleado_id, empleadoId, empleado, empleado_nombre, monto, monto_original, montoOriginal, moneda_original, monedaOriginal, tasa_cambio, descripcion, notas, fecha, fecha_adelanto, metodo_pago, metodoPago, estado } = req.body;
+    const finalEmpleadoId = empleadoId || empleado_id || null;
+    const finalEstado = (estado || 'PENDIENTE').toUpperCase();
+    
     const { data, error } = await supabase
       .from('Adelanto')
       .insert({
         id: crypto.randomUUID(),
-        empleadoId: empleado_id || null,
+        empleadoId: finalEmpleadoId,
         empleado: empleado || empleado_nombre || 'Sin nombre',
         monto: monto || 0,
         monto_original: monto_original || montoOriginal || null,
@@ -33,7 +36,7 @@ router.post('/', requireAdmin, async (req, res) => {
         tasa_cambio: tasa_cambio || null,
         metodo_pago: metodo_pago || metodoPago || null,
         descripcion: notas || descripcion || null,
-        estado: 'PENDIENTE',
+        estado: finalEstado,
         fecha: fecha_adelanto ? new Date(fecha_adelanto).toISOString() : (fecha ? new Date(fecha).toISOString() : new Date().toISOString())
       })
       .select()
@@ -60,10 +63,11 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 router.put('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { empleado_id, empleado, empleado_nombre, monto, monto_original, montoOriginal, moneda_original, monedaOriginal, tasa_cambio, descripcion, notas, fecha, fecha_adelanto, metodo_pago, metodoPago, estado, fecha_descuento } = req.body;
+    const { empleado_id, empleadoId, empleado, empleado_nombre, monto, monto_original, montoOriginal, moneda_original, monedaOriginal, tasa_cambio, descripcion, notas, fecha, fecha_adelanto, metodo_pago, metodoPago, estado, fecha_descuento } = req.body;
     
     const updateData = {};
-    if (empleado_id !== undefined) updateData.empleadoId = empleado_id;
+    const finalEmpleadoId = empleadoId !== undefined ? empleadoId : empleado_id;
+    if (finalEmpleadoId !== undefined) updateData.empleadoId = finalEmpleadoId;
     if (empleado || empleado_nombre) updateData.empleado = empleado || empleado_nombre;
     if (monto !== undefined) updateData.monto = monto;
     if (monto_original || montoOriginal !== undefined) updateData.monto_original = monto_original || montoOriginal;
@@ -74,8 +78,9 @@ router.put('/:id', requireAdmin, async (req, res) => {
     if (fecha_adelanto || fecha) updateData.fecha = fecha_adelanto ? new Date(fecha_adelanto).toISOString() : new Date(fecha).toISOString();
     
     // Campos de estado para integración con nómina
-    if (estado !== undefined) updateData.estado = estado;
+    if (estado !== undefined) updateData.estado = estado.toUpperCase();
     if (fecha_descuento !== undefined) updateData.fecha_descuento = fecha_descuento;
+    
     const { data, error } = await supabase
       .from('Adelanto')
       .update(updateData)

@@ -87,7 +87,7 @@ export default function Adelantos() {
     const filtered = adelantos.filter(a => {
       const name = a.empleado_nombre || a.empleado || "";
       const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesEstado = estadoFiltro === "todos" || a.estado === estadoFiltro;
+      const matchesEstado = estadoFiltro === "todos" || a.estado?.toLowerCase() === estadoFiltro.toLowerCase();
       return matchesSearch && matchesEstado;
     });
 
@@ -100,7 +100,7 @@ export default function Adelantos() {
       filteredAdelantos: filtered,
       stats: {
         total: delMes.reduce((s, a) => s + (a.monto || 0), 0),
-        pendientes: delMes.filter(a => a.estado === "pendiente").reduce((s, a) => s + (a.monto || 0), 0),
+        pendientes: delMes.filter(a => a.estado?.toLowerCase() === "pendiente").reduce((s, a) => s + (a.monto || 0), 0),
         empleados: new Set(delMes.map(a => a.empleado_id)).size
       }
     };
