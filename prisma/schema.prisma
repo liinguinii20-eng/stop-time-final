@@ -17,6 +17,7 @@ model Venta {
   monto_original  Float?
   moneda_original String?
   detalles        DetalleVenta[]
+  estado          String         @default("ACTIVO")
   createdAt       DateTime       @default(now())
 
   @@index([fecha_hora])
@@ -178,7 +179,7 @@ model SesionUsuario {
 model Compra {
   id        String   @id @default(uuid())
   proveedor String?
-  total     Float
+  total     Float    @default(0)
   fecha     DateTime @default(now())
 }
 
@@ -242,6 +243,7 @@ model Gasto {
   metodo_pago   String?
   descripcion   String?
   fecha         DateTime @default(now())
+  estado        String   @default("ACTIVO")
 
   @@index([fecha])
 }
@@ -336,3 +338,22 @@ model Usuario {
   createdAt DateTime @default(now())
   sesiones  SesionUsuario[]
 }
+
+model ArqueoCaja {
+  id        String   @id @default(uuid())
+  fecha     DateTime @default(now())
+  estado    String   @default("ACTIVO")
+}
+
+model ReporteTrimestral {
+  id                  String   @id @default(uuid())
+  periodo             String
+  fechaInicio         DateTime
+  fechaFin            DateTime
+  totalNominasPagadas Float
+  totalAdelantos      Float
+  totalIngresosCaja   Float
+  totalEgresosCaja    Float
+  createdAt           DateTime @default(now())
+}
+

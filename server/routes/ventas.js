@@ -10,6 +10,7 @@ router.get('/', requireAuth, async (req, res) => {
     const { data, error } = await supabase
       .from('Venta')
       .select('*, detalles:DetalleVenta(*)')
+      .neq('estado', 'ARCHIVADO')
       .order('fecha_hora', { ascending: false })
       .limit(1000);
     if (error) throw error;

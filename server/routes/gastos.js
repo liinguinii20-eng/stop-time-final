@@ -8,6 +8,7 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('Gasto').select('*')
+      .neq('estado', 'ARCHIVADO')
       .order('fecha', { ascending: false })
       .limit(1000);
     if (error) throw error;

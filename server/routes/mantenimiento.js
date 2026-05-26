@@ -15,10 +15,10 @@ router.get('/resumen-depuracion', requireAdmin, async (req, res) => {
 
     // Consultar totales con metodo_pago para separar monedas
     const [ventas, gastos, comandas, adelantos] = await Promise.all([
-      supabase.from('Venta').select('total_venta, metodo_pago, monto_original, moneda_original').lt('fecha_hora', fechaLimite),
-      supabase.from('Gasto').select('monto, metodo_pago, monto_original, moneda_original').lt('fecha', fechaLimite),
+      supabase.from('Venta').select('total_venta, metodo_pago, monto_original, moneda_original').lt('fecha_hora', fechaLimite).neq('estado', 'ARCHIVADO'),
+      supabase.from('Gasto').select('monto, metodo_pago, monto_original, moneda_original').lt('fecha', fechaLimite).neq('estado', 'ARCHIVADO'),
       supabase.from('Comanda').select('total_comanda').lt('fecha_apertura', fechaLimite),
-      supabase.from('Adelanto').select('monto, metodo_pago, monto_original, moneda_original').lt('fecha', fechaLimite)
+      supabase.from('Adelanto').select('monto, metodo_pago, monto_original, moneda_original').lt('fecha', fechaLimite).neq('estado', 'ARCHIVADO')
     ]);
 
     const esBs = (m) => m && m.endsWith('_bs');

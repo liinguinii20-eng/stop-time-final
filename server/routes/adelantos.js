@@ -8,6 +8,7 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('Adelanto').select('*')
+      .neq('estado', 'ARCHIVADO')
       .order('createdAt', { ascending: false })
       .limit(200);
     if (error) throw error;

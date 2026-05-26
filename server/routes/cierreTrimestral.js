@@ -9,25 +9,88 @@ const prisma = new PrismaClient();
 router.post('/ejecutar', requireAdmin, async (req, res) => {
   try {
     // 1. Recopilar datos (Historial Cerrado)
+    const tresMesesAtras = new Date();
+    tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
+    const fechaFin = tresMesesAtras;
+
+    // Obtener la fecha de inicio a partir de la última depuración
+    const ultimoReporte = await prisma.reporteTrimestral.findFirst({
+      orderBy: { fechaFin: 'desc' }
+    });
+    const fechaInicio = ultimoReporte ? ultimoReporte.fechaFin : new Date(0);
+
+    // Calcular período
+    const year = fechaFin.getFullYear();
+    const month = fechaFin.getMonth();
+    const quarter = Math.floor(month / 3) + 1;
+    const periodo = `Trimestre ${quarter} - ${year}`;
+
     // Comandas pagadas y sus detalles
     const comandasCerradas = await prisma.comanda.findMany({
-      where: { estado: 'pagada' },
+      where: {
+        estado: 'pagada',
+        fecha_apertura: {
+          gte: fechaInicio,
+          lt: fechaFin
+        }
+      },
       include: { detalles: true }
     });
 
     // Ventas (Transacciones de caja)
     const ventas = await prisma.venta.findMany({
+      where: {
+        fecha_hora: {
+          gte: fechaInicio,
+          lt: fechaFin
+        },
+        estado: { not: 'ARCHIVADO' }
+      },
       include: { detalles: true }
     });
 
     // Adelantos
-    const adelantos = await prisma.adelanto.findMany();
+    const adelantos = await prisma.adelanto.findMany({
+      where: {
+        fecha: {
+          gte: fechaInicio,
+          lt: fechaFin
+        },
+        estado: { not: 'ARCHIVADO' }
+      }
+    });
 
     // Gastos
-    const gastos = await prisma.gasto.findMany();
+    const gastos = await prisma.gasto.findMany({
+      where: {
+        fecha: {
+          gte: fechaInicio,
+          lt: fechaFin
+        },
+        estado: { not: 'ARCHIVADO' }
+      }
+    });
+
+    // Nóminas (para consolidar y guardar en reporte)
+    const nominas = await prisma.nomina.findMany({
+      where: {
+        fecha_pago: {
+          gte: fechaInicio,
+          lt: fechaFin
+        },
+        estado: { not: 'ARCHIVADO' }
+      }
+    });
 
     // Pagos Mixtos
-    const pagosMixtos = await prisma.pagoMixto.findMany();
+    const pagosMixtos = await prisma.pagoMixto.findMany({
+      where: {
+        fecha: {
+          gte: fechaInicio,
+          lt: fechaFin
+        }
+      }
+    });
 
     // Cuentas por Cobrar (Solo las pagadas para eliminar, pero para el reporte quizás todas?)
     // "ni cuentas por cobrar que aún tengan saldo a favor o estén pendientes. Solo se purga el historial cerrado."
@@ -36,7 +99,11 @@ router.post('/ejecutar', requireAdmin, async (req, res) => {
         OR: [
           { estado: 'pagada' },
           { monto_pendiente: { lte: 0 } }
-        ]
+        ],
+        fecha_creacion: {
+          gte: fechaInicio,
+          lt: fechaFin
+        }
       }
     });
 
@@ -47,13 +114,31 @@ router.post('/ejecutar', requireAdmin, async (req, res) => {
         OR: [
           { cuenta_id: { in: cxcPagadasIds } },
           { cuentaId: { in: cxcPagadasIds } }
-        ]
+        ],
+        fecha_pago: {
+          gte: fechaInicio,
+          lt: fechaFin
+        }
       }
     });
 
     // Cuentas por cobrar e historial general para el reporte (todas las transacciones de los ultimos 3 meses o todo el historial que se va a purgar)
-    const todasCxc = await prisma.cuentaPorCobrar.findMany();
-    const todosPagosCxc = await prisma.pagoCuentaPorCobrar.findMany();
+    const todasCxc = await prisma.cuentaPorCobrar.findMany({
+      where: {
+        fecha_creacion: {
+          gte: fechaInicio,
+          lt: fechaFin
+        }
+      }
+    });
+    const todosPagosCxc = await prisma.pagoCuentaPorCobrar.findMany({
+      where: {
+        fecha_pago: {
+          gte: fechaInicio,
+          lt: fechaFin
+        }
+      }
+    });
 
     // 2. Generar Excel
     const workbook = new ExcelJS.Workbook();
@@ -278,6 +363,32 @@ router.post('/ejecutar', requireAdmin, async (req, res) => {
     });
     styleHeader(sheetCaja);
 
+    // --- Hoja: Nominas ---
+    const sheetNominas = workbook.addWorksheet('Nominas');
+    sheetNominas.columns = [
+      { header: 'Fecha Pago', key: 'fecha' },
+      { header: 'Empleado', key: 'empleado' },
+      { header: 'Salario Base USD', key: 'base' },
+      { header: 'Total Adelantos Descontados USD', key: 'adelantos' },
+      { header: 'Salario Neto Pagado USD', key: 'neto' },
+      { header: 'Método Pago', key: 'metodo' },
+      { header: 'Moneda', key: 'moneda' },
+      { header: 'Monto Convertido', key: 'monto_convertido' }
+    ];
+
+    nominas.forEach(n => {
+      sheetNominas.addRow({
+        fecha: n.fecha_pago ? new Date(n.fecha_pago).toLocaleString() : '',
+        empleado: n.empleado_nombre || '',
+        base: n.salario_base || 0,
+        adelantos: n.total_adelantos || 0,
+        neto: n.salario_neto || 0,
+        metodo: n.metodo_pago || '',
+        moneda: n.moneda_pago || 'USD',
+        monto_convertido: n.monto_convertido || 0
+      });
+    });
+    styleHeader(sheetNominas);
 
     // Generar buffer del Excel
     const buffer = await workbook.xlsx.writeBuffer();
@@ -286,28 +397,65 @@ router.post('/ejecutar', requireAdmin, async (req, res) => {
     // "eliminar ese historial transaccional viejo... NO puedes borrar la base de productos, clientes, ni cuentas por cobrar pendientes."
     
     await prisma.$transaction(async (tx) => {
-      // 3.1 Eliminar Detalles de Comandas Cerradas y luego las Comandas Cerradas
+      // 3.1 Calcular y guardar totales en ReporteTrimestral
+      const totalNominasPagadas = nominas.reduce((sum, n) => sum + (n.salario_neto || 0), 0);
+      const totalAdelantos = adelantos.reduce((sum, a) => sum + (a.monto || 0), 0);
+      const totalIngresosCaja = ventas.reduce((sum, v) => sum + (v.total_venta || 0), 0);
+      const totalEgresosCaja = gastos.reduce((sum, g) => sum + (g.monto || 0), 0);
+
+      await tx.reporteTrimestral.create({
+        data: {
+          periodo,
+          fechaInicio,
+          fechaFin,
+          totalNominasPagadas,
+          totalAdelantos,
+          totalIngresosCaja,
+          totalEgresosCaja
+        }
+      });
+
+      // 3.2 Soft delete de finanzas (Nomina, Adelanto, Gasto, Venta) a estado "ARCHIVADO"
+      const nominasIds = nominas.map(n => n.id);
+      if (nominasIds.length > 0) {
+        await tx.nomina.updateMany({
+          where: { id: { in: nominasIds } },
+          data: { estado: 'ARCHIVADO' }
+        });
+      }
+
+      const adelantosIds = adelantos.map(a => a.id);
+      if (adelantosIds.length > 0) {
+        await tx.adelanto.updateMany({
+          where: { id: { in: adelantosIds } },
+          data: { estado: 'ARCHIVADO' }
+        });
+      }
+
+      const gastosIds = gastos.map(g => g.id);
+      if (gastosIds.length > 0) {
+        await tx.gasto.updateMany({
+          where: { id: { in: gastosIds } },
+          data: { estado: 'ARCHIVADO' }
+        });
+      }
+
+      const ventasIds = ventas.map(v => v.id);
+      if (ventasIds.length > 0) {
+        await tx.venta.updateMany({
+          where: { id: { in: ventasIds } },
+          data: { estado: 'ARCHIVADO' }
+        });
+      }
+
+      // 3.3 Eliminar Detalles de Comandas Cerradas y luego las Comandas Cerradas (del rango)
       const comandasCerradasIds = comandasCerradas.map(c => c.id);
       if (comandasCerradasIds.length > 0) {
         await tx.detalleComanda.deleteMany({ where: { comandaId: { in: comandasCerradasIds } } });
         await tx.comanda.deleteMany({ where: { id: { in: comandasCerradasIds } } });
       }
 
-      // 3.2 Eliminar Detalles de Ventas y luego Ventas (todas las ventas históricas exportadas)
-      const ventasIds = ventas.map(v => v.id);
-      if (ventasIds.length > 0) {
-        await tx.detalleVenta.deleteMany({ where: { ventaId: { in: ventasIds } } });
-        await tx.pagoMixto.deleteMany({ where: { ventaId: { in: ventasIds } } }); // Pagos mixtos asociados
-        await tx.venta.deleteMany({ where: { id: { in: ventasIds } } });
-      }
-
-      // 3.3 Eliminar Adelantos
-      await tx.adelanto.deleteMany();
-
-      // 3.4 Eliminar Gastos
-      await tx.gasto.deleteMany();
-
-      // 3.5 Eliminar Cuentas por Cobrar Pagadas y sus pagos
+      // 3.4 Eliminar Cuentas por Cobrar Pagadas y sus pagos (del rango)
       if (cxcPagadasIds.length > 0) {
         await tx.pagoCuentaPorCobrar.deleteMany({
           where: {

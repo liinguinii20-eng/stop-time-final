@@ -10,6 +10,7 @@ router.get('/', requireAuth, async (req, res) => {
     const { data, error } = await supabase
       .from('Nomina')
       .select('*')
+      .neq('estado', 'ARCHIVADO')
       .order('fecha_pago', { ascending: false })
       .limit(500);
     if (error) throw error;
