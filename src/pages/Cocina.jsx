@@ -6,9 +6,40 @@ import { Button } from "@/components/ui/button";
 import { ChefHat, Clock, CheckCircle, Utensils, User, Wifi, WifiOff, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-// ─── Sonido de alerta ────────────────────────────────────────────────
-const ALERT_SOUND_BASE64 =
-  'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDGH0fPTgjMGHm7A7+OZSA0PVqzn77BdGQc+ltryxnMlBSyAzfLYiTcIGWi77eeeTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQQxh9Hz04I0Bh5uwO/jmUgND1as5++wXRkHPpbZ8sVzJQUsgM3y2Ik3CBlou+3nnk0QDFCn4/C2YxwGOJLX8sx5LAUkd8fw3ZBACBResnbznkwQDU+m4++1Xx0GOZTa88l4LAYmeMjvAjRdYWZ7lNLYwmIbAzJpvvHL';
+// ─── Sonido de alerta FUERTE (Web Audio API) ─────────────────────────
+// Genera una sirena potente de restaurante a volumen máximo
+const playLoudAlert = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    const playBeep = (startTime, freq1, freq2, duration) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq1, ctx.currentTime + startTime);
+      osc.frequency.linearRampToValueAtTime(freq2, ctx.currentTime + startTime + duration);
+      gain.gain.setValueAtTime(0.9, ctx.currentTime + startTime);
+      gain.gain.setValueAtTime(0.9, ctx.currentTime + startTime + duration - 0.05);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + startTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + startTime);
+      osc.stop(ctx.currentTime + startTime + duration);
+    };
+
+    // 3 ciclos de sirena (sube y baja) — ~3 segundos en total
+    for (let i = 0; i < 3; i++) {
+      const t = i * 1.0;
+      playBeep(t, 800, 1600, 0.45);      // Sube
+      playBeep(t + 0.5, 1600, 800, 0.45); // Baja
+    }
+
+    // Cerrar contexto después de que termine
+    setTimeout(() => ctx.close().catch(() => {}), 4000);
+  } catch (e) {
+    console.error('[Cocina] Error reproduciendo alerta:', e);
+  }
+};
 
 // ─── Componente: Contador de tiempo real ────────────────────────────
 const TiempoEspera = ({ fechaApertura }) => {
@@ -100,18 +131,18 @@ export default function Cocina() {
   const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
   const [flashId, setFlashId] = useState(null); // Para animación de nueva comanda
 
-  // 1. Obtener comandas activas (se refresca vía SSE + fallback polling lento)
+  // 1. Obtener comandas activas (se refresca vía SSE + fallback polling rápido)
   const { data: comandas = [] } = useQuery({
     queryKey: ['comandas-cocina'],
     queryFn: () => base44.entities.Comanda.list('-created_date', 200),
-    refetchInterval: 30000, // Fallback: cada 30s (SSE hace el trabajo pesado)
+    refetchInterval: 3000, // Actualización rápida cada 3 segundos
   });
 
   // 2. Obtener detalles de platos pendientes
   const { data: detalles = [] } = useQuery({
     queryKey: ['detalles-comandas-cocina'],
     queryFn: () => base44.entities.DetalleComanda.list('-created_date', 500),
-    refetchInterval: 30000,
+    refetchInterval: 3000,
   });
 
   // 3. Agrupar platos por comanda
@@ -163,13 +194,10 @@ export default function Cocina() {
 
   }, [detalles, comandas]);
 
-  // 4. Reproducir sonido de alerta
+  // 4. Reproducir sonido de alerta FUERTE
   const playAlertSound = useCallback(() => {
     if (!sonidoActivo) return;
-    try {
-      const audio = new Audio(ALERT_SOUND_BASE64);
-      audio.play().catch(() => {});
-    } catch {}
+    playLoudAlert();
   }, [sonidoActivo]);
 
   // 5. Handler de eventos SSE

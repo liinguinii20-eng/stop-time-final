@@ -358,7 +358,7 @@ router.post('/:id/detalles', requireAdmin, async (req, res) => {
 });
 
 // Actualizar estado de un plato (DetalleComanda)
-router.put('/detalles/:detalleId', requireAdmin, async (req, res) => {
+router.put('/detalles/:detalleId', requireAuth, async (req, res) => {
   try {
     const { detalleId } = req.params;
     const updateData = {};
