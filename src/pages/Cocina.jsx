@@ -6,65 +6,62 @@ import { Button } from "@/components/ui/button";
 import { ChefHat, Clock, CheckCircle, Utensils, User, Wifi, WifiOff, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-// ─── Sonido de alerta MÁXIMO VOLUMEN — GRILLO (Web Audio API) ────────
-// Grillo a volumen MÁXIMO con compresor para exprimir cada decibel
-const playLoudAlert = () => {
+// ─── Sonido de alerta — CAMPANA DE COCINA (Web Audio API) ────────────
+// Timbre fuerte pero agradable, frecuencias medias, no chillón
+const playLoudAlert = async () => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // ⚠️ CRUCIAL: Desbloquear el AudioContext (Chrome lo suspende por defecto)
+    await ctx.resume();
 
-    // Compresor para empujar el audio al techo sin distorsionar
-    const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-3, ctx.currentTime);
-    compressor.knee.setValueAtTime(0, ctx.currentTime);
-    compressor.ratio.setValueAtTime(20, ctx.currentTime);
-    compressor.attack.setValueAtTime(0, ctx.currentTime);
-    compressor.release.setValueAtTime(0.01, ctx.currentTime);
-
-    // Ganancia maestra al máximo
     const masterGain = ctx.createGain();
     masterGain.gain.setValueAtTime(1.0, ctx.currentTime);
-    masterGain.connect(compressor);
-    compressor.connect(ctx.destination);
+    masterGain.connect(ctx.destination);
 
-    // Un pulso de grillo conectado al compresor
-    const chirpPulse = (startTime, freq, duration) => {
+    // Un "ding" de campana: tono limpio que se desvanece
+    const playDing = (startTime, freq, duration) => {
+      // Tono principal (seno = limpio, no chillón)
       const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'square';
+      osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, ctx.currentTime + startTime);
-      osc.frequency.linearRampToValueAtTime(freq * 1.05, ctx.currentTime + startTime + duration);
-      gain.gain.setValueAtTime(0, ctx.currentTime + startTime);
-      gain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + startTime + 0.003);
-      gain.gain.setValueAtTime(1.0, ctx.currentTime + startTime + duration - 0.003);
-      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + startTime + duration);
-      osc.connect(gain);
-      gain.connect(masterGain);
+
+      // Armónico para darle cuerpo
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(freq * 2, ctx.currentTime + startTime);
+
+      const gain1 = ctx.createGain();
+      gain1.gain.setValueAtTime(1.0, ctx.currentTime + startTime);
+      gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + startTime + duration);
+
+      const gain2 = ctx.createGain();
+      gain2.gain.setValueAtTime(0.4, ctx.currentTime + startTime);
+      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + startTime + duration);
+
+      osc.connect(gain1);
+      osc2.connect(gain2);
+      gain1.connect(masterGain);
+      gain2.connect(masterGain);
+
       osc.start(ctx.currentTime + startTime);
       osc.stop(ctx.currentTime + startTime + duration);
+      osc2.start(ctx.currentTime + startTime);
+      osc2.stop(ctx.currentTime + startTime + duration);
     };
 
-    // Un chirp = 5 pulsos rápidos con 4 capas de frecuencia simultáneas
-    const chirpGroup = (groupStart) => {
-      for (let p = 0; p < 5; p++) {
-        const t = groupStart + p * 0.07;
-        chirpPulse(t, 3800 + Math.random() * 200, 0.035);
-        chirpPulse(t, 4200 + Math.random() * 200, 0.035);
-        chirpPulse(t, 4600 + Math.random() * 200, 0.035);
-        chirpPulse(t, 5000 + Math.random() * 200, 0.035);
-      }
-    };
+    // Patrón: DING-DING ... DING-DING ... DING-DING (3 pares)
+    // Frecuencias medias (500-900Hz) = audibles y no chillones
+    playDing(0.0, 800, 0.5);   // DING
+    playDing(0.3, 600, 0.5);   // DONG
+    playDing(1.0, 800, 0.5);   // DING
+    playDing(1.3, 600, 0.5);   // DONG
+    playDing(2.0, 800, 0.5);   // DING
+    playDing(2.3, 600, 0.5);   // DONG
+    playDing(3.0, 900, 0.8);   // DIIIING final largo
 
-    // 6 chirps insistentes (~4.5 segundos)
-    chirpGroup(0.0);
-    chirpGroup(0.7);
-    chirpGroup(1.4);
-    chirpGroup(2.1);
-    chirpGroup(2.8);
-    chirpGroup(3.5);
-
-    setTimeout(() => ctx.close().catch(() => {}), 6000);
+    setTimeout(() => ctx.close().catch(() => {}), 5000);
   } catch (e) {
-    console.error('[Cocina] Error reproduciendo alerta grillo:', e);
+    console.error('[Cocina] Error reproduciendo alerta:', e);
   }
 };
 
