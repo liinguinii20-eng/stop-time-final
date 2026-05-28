@@ -50,7 +50,7 @@ if (typeof window !== 'undefined') {
   eventos.forEach(e => window.addEventListener(e, handler, { once: false }));
 }
 
-// Sonido de alerta: CAMPANA fuerte, frecuencias medias, no chillón
+// Sonido de alerta: Grillo nocturno bonito y melódico 🦗✨
 const playLoudAlert = () => {
   try {
     const ctx = getAudioCtx();
@@ -60,48 +60,100 @@ const playLoudAlert = () => {
       return;
     }
 
+    const now = ctx.currentTime;
+
+    // Master con volumen alto pero limpio
     const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(1.0, ctx.currentTime);
+    masterGain.gain.setValueAtTime(0.85, now);
     masterGain.connect(ctx.destination);
 
-    const playDing = (startTime, freq, duration) => {
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + startTime);
+    // Un solo "cri" de grillo: tono puro + armónico suave con tremolo natural
+    const criPulse = (startTime, baseFreq, duration) => {
+      const t = now + startTime;
 
+      // Tono fundamental — sine puro = sonido limpio y bonito
+      const osc1 = ctx.createOscillator();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(baseFreq, t);
+      // Leve glissando ascendente como grillo real
+      osc1.frequency.linearRampToValueAtTime(baseFreq * 1.03, t + duration);
+
+      // Armónico suave a la octava (da cuerpo sin ser estridente)
       const osc2 = ctx.createOscillator();
-      osc2.type = 'triangle';
-      osc2.frequency.setValueAtTime(freq * 1.5, ctx.currentTime + startTime);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(baseFreq * 2, t);
+      osc2.frequency.linearRampToValueAtTime(baseFreq * 2.06, t + duration);
 
-      const gain1 = ctx.createGain();
-      gain1.gain.setValueAtTime(1.0, ctx.currentTime + startTime);
-      gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + startTime + duration);
+      // Tremolo rápido (30-40 Hz) — da la textura de "cri-cri" vibrante
+      const lfo = ctx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.setValueAtTime(35, t);
 
-      const gain2 = ctx.createGain();
-      gain2.gain.setValueAtTime(0.5, ctx.currentTime + startTime);
-      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + startTime + duration);
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.setValueAtTime(0.4, t); // profundidad del tremolo
 
-      osc.connect(gain1);
-      osc2.connect(gain2);
-      gain1.connect(masterGain);
-      gain2.connect(masterGain);
+      lfo.connect(lfoGain);
 
-      osc.start(ctx.currentTime + startTime);
-      osc.stop(ctx.currentTime + startTime + duration);
-      osc2.start(ctx.currentTime + startTime);
-      osc2.stop(ctx.currentTime + startTime + duration);
+      // Envolvente suave: fade-in rápido, sustain, fade-out natural
+      const env1 = ctx.createGain();
+      env1.gain.setValueAtTime(0, t);
+      env1.gain.linearRampToValueAtTime(0.7, t + 0.008);
+      env1.gain.setValueAtTime(0.7, t + duration * 0.7);
+      env1.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      const env2 = ctx.createGain();
+      env2.gain.setValueAtTime(0, t);
+      env2.gain.linearRampToValueAtTime(0.2, t + 0.008);
+      env2.gain.setValueAtTime(0.2, t + duration * 0.7);
+      env2.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      // Conectar tremolo a las envolventes
+      lfoGain.connect(env1.gain);
+      lfoGain.connect(env2.gain);
+
+      osc1.connect(env1);
+      env1.connect(masterGain);
+
+      osc2.connect(env2);
+      env2.connect(masterGain);
+
+      osc1.start(t);
+      osc1.stop(t + duration);
+      osc2.start(t);
+      osc2.stop(t + duration);
+      lfo.start(t);
+      lfo.stop(t + duration);
     };
 
-    // DING-DONG x3 + DIIIING final (~4 seg)
-    playDing(0.0, 800, 0.5);
-    playDing(0.3, 600, 0.5);
-    playDing(1.0, 800, 0.5);
-    playDing(1.3, 600, 0.5);
-    playDing(2.0, 800, 0.5);
-    playDing(2.3, 600, 0.5);
-    playDing(3.0, 900, 0.8);
+    // Un chirp = ráfaga rápida de "cris" (como un grillo real frotando sus alas)
+    const chirpGroup = (groupStart, numPulses, baseFreq) => {
+      const pulseSpacing = 0.055; // espacio entre cada "cri"
+      const pulseDuration = 0.04; // duración de cada pulso
+      for (let i = 0; i < numPulses; i++) {
+        // Pequeña variación natural en frecuencia
+        const freqVar = baseFreq + (Math.random() - 0.5) * 40;
+        criPulse(groupStart + i * pulseSpacing, freqVar, pulseDuration);
+      }
+    };
+
+    // Patrón natural de grillo: 3 ráfagas con pausa entre ellas
+    // Frecuencia ~4500 Hz = tono agudo pero dulce (grillo de campo)
+    const freq = 4200;
+
+    chirpGroup(0.0,  6, freq);     // cri-cri-cri-cri-cri-cri
+    chirpGroup(0.7,  5, freq);     // cri-cri-cri-cri-cri
+    chirpGroup(1.3,  6, freq);     // cri-cri-cri-cri-cri-cri
+
+    // Segunda ronda un poco más baja (variación natural)
+    chirpGroup(2.2,  5, freq - 80);  // cri-cri-cri-cri-cri
+    chirpGroup(2.9,  6, freq - 80);  // cri-cri-cri-cri-cri-cri
+
+    // Fade out del master después de todas las notas
+    masterGain.gain.setValueAtTime(0.85, now + 3.5);
+    masterGain.gain.linearRampToValueAtTime(0, now + 4.0);
+
   } catch (e) {
-    console.error('[Cocina] Error reproduciendo alerta:', e);
+    console.error('[Cocina] Error reproduciendo alerta grillo:', e);
   }
 };
 
