@@ -12,6 +12,7 @@ const METODOS_LABEL = {
   'transferencia_bs': '🏦 Transferencia Bs',
   'efectivo_bs': '💴 Efectivo Bs',
   'efectivo_cop': '💶 Efectivo COP',
+  'mixto': '🔀 Pago Mixto',
 };
 
 const MONEDA_SIMBOLO = {

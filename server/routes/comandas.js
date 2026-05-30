@@ -201,19 +201,22 @@ router.post('/:id/pagar', requireAdmin, async (req, res) => {
 
     // 4. Manejar Pagos Mixtos si existen
     if (metodoPago === 'mixto' && pagosMixtos && pagosMixtos.length > 0) {
-      const pagosData = pagosMixtos.map(p => ({
-        id: crypto.randomUUID(),
-        ventaId,
-        monto: p.monto !== undefined ? p.monto : (p.monto_original || 0),
-        monto_usd: p.monto_usd,
-        monto_original: p.monto_original,
-        metodo_pago: p.metodo_pago,
-        metodo: p.metodo_pago,
-        moneda: p.moneda,
-        fecha: new Date().toISOString()
-      }));
-      const { error: pError } = await supabase.from('PagoMixto').insert(pagosData);
-      if (pError) console.error("Error insertando pago mixto:", pError);
+      for (const p of pagosMixtos) {
+        const pagoInsert = {
+          id: crypto.randomUUID(),
+          ventaId,
+          monto: p.monto_usd || p.monto || p.monto_original || 0,
+          monto_usd: p.monto_usd || 0,
+          monto_original: p.monto_original || 0,
+          metodo_pago: p.metodo_pago,
+          moneda: p.moneda || 'usd',
+          fecha: new Date().toISOString()
+        };
+        const { error: pError } = await supabase.from('PagoMixto').insert(pagoInsert);
+        if (pError) {
+          console.error("Error insertando pago mixto:", pError, "Data:", JSON.stringify(pagoInsert));
+        }
+      }
     }
 
     // 4.5 Crear Cuenta por Cobrar si aplica

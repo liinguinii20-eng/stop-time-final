@@ -22,12 +22,14 @@ import {
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import ModalPagoMixto from "../components/comandas/ModalPagoMixto";
 
 export default function CuentasPorCobrar() {
   const [searchTerm, setSearchTerm] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("pendiente");
   const [cuentaSeleccionada, setCuentaSeleccionada] = useState(null);
   const [mostrarModalPago, setMostrarModalPago] = useState(false);
+  const [mostrarPagoMixto, setMostrarPagoMixto] = useState(false);
   const [montoPago, setMontoPago] = useState("");
   const [metodoPago, setMetodoPago] = useState("efectivo_usd");
   const [notasPago, setNotasPago] = useState("");
@@ -53,23 +55,37 @@ export default function CuentasPorCobrar() {
   const tasaActual = tasas.length > 0 ? tasas[0] : null;
 
   const registrarPagoMutation = useMutation({
-    mutationFn: async ({ cuentaId, monto, metodo, notas }) => {
+    mutationFn: async ({ cuentaId, montoTotal, metodo, notas, pagosMixtos }) => {
       const cuenta = cuentas.find(c => c.id === cuentaId);
       if (!cuenta) throw new Error("Cuenta no encontrada");
 
-      const pagoData = {
-        cuenta_id: cuentaId,
-        monto_pagado: parseFloat(monto),
-        metodo_pago: metodo,
-        fecha_pago: new Date().toISOString(),
-        tasa_bs_aplicada: tasaActual?.tasa_bs_usd || 0,
-        notas: notas || "",
-        empleado_nombre: empleadoSesion?.nombre_completo || "Sistema"
-      };
+      if (pagosMixtos && pagosMixtos.length > 0) {
+        for (const p of pagosMixtos) {
+          const pagoData = {
+            cuenta_id: cuentaId,
+            monto_pagado: p.monto_usd,
+            metodo_pago: p.metodo_pago,
+            fecha_pago: new Date().toISOString(),
+            tasa_bs_aplicada: p.moneda === 'ves' ? p.tasa_cambio_aplicada : (tasaActual?.tasa_bs_usd || 0),
+            notas: notas || `Pago mixto (${p.moneda.toUpperCase()})`,
+            empleado_nombre: empleadoSesion?.nombre_completo || "Sistema"
+          };
+          await base44.entities.PagoCuentaPorCobrar.create(pagoData);
+        }
+      } else {
+        const pagoData = {
+          cuenta_id: cuentaId,
+          monto_pagado: parseFloat(montoTotal),
+          metodo_pago: metodo,
+          fecha_pago: new Date().toISOString(),
+          tasa_bs_aplicada: tasaActual?.tasa_bs_usd || 0,
+          notas: notas || "",
+          empleado_nombre: empleadoSesion?.nombre_completo || "Sistema"
+        };
+        await base44.entities.PagoCuentaPorCobrar.create(pagoData);
+      }
 
-      await base44.entities.PagoCuentaPorCobrar.create(pagoData);
-
-      const nuevoMontoPendiente = cuenta.monto_pendiente - parseFloat(monto);
+      const nuevoMontoPendiente = cuenta.monto_pendiente - parseFloat(montoTotal);
       const nuevoEstado = nuevoMontoPendiente <= 0 ? "pagada" : 
                           nuevoMontoPendiente < cuenta.monto_total ? "pagada_parcial" : "pendiente";
 
@@ -78,7 +94,7 @@ export default function CuentasPorCobrar() {
         estado: nuevoEstado
       });
 
-      return { cuenta: cuenta.cliente_nombre, monto: parseFloat(monto) };
+      return { cuenta: cuenta.cliente_nombre, monto: parseFloat(montoTotal) };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['cuentas-por-cobrar'] });
@@ -105,12 +121,29 @@ export default function CuentasPorCobrar() {
       return;
     }
 
+    if (metodoPago === "mixto") {
+      setMostrarModalPago(false);
+      setMostrarPagoMixto(true);
+      return;
+    }
+
     registrarPagoMutation.mutate({
       cuentaId: cuentaSeleccionada.id,
-      monto: montoPago,
+      montoTotal: montoPago,
       metodo: metodoPago,
       notas: notasPago
     });
+  };
+
+  const handleConfirmarPagoMixto = (distribucion) => {
+    registrarPagoMutation.mutate({
+      cuentaId: cuentaSeleccionada.id,
+      montoTotal: montoPago,
+      metodo: "mixto",
+      notas: notasPago,
+      pagosMixtos: distribucion
+    });
+    setMostrarPagoMixto(false);
   };
 
   const cuentasFiltradas = cuentas.filter(cuenta => {
@@ -516,6 +549,16 @@ export default function CuentasPorCobrar() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Modal Pago Mixto */}
+        <ModalPagoMixto
+          isOpen={mostrarPagoMixto}
+          onClose={() => setMostrarPagoMixto(false)}
+          totalUSD={parseFloat(montoPago || 0)}
+          tasaBs={tasaActual?.tasa_bs_usd}
+          onConfirm={handleConfirmarPagoMixto}
+          isLoading={registrarPagoMutation.isPending}
+        />
       </div>
     </div>
   );

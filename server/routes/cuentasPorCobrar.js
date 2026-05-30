@@ -26,6 +26,48 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
+router.post('/', requireAdmin, async (req, res) => {
+  try {
+    const body = req.body;
+    const insertData = {
+      id: body.id || crypto.randomUUID(),
+      clienteNombre: body.clienteNombre || body.cliente_nombre || 'Cliente sin nombre',
+      empleadoId: body.empleadoId || body.empleado_id || null,
+      monto: parseFloat(body.monto || body.monto_total || 0),
+      monto_total: parseFloat(body.monto_total || body.monto || 0),
+      monto_pendiente: parseFloat(body.monto_pendiente || body.monto_total || body.monto || 0),
+      monto_descontado: parseFloat(body.monto_descontado || 0),
+      estado: body.estado || 'pendiente',
+      comanda_numero: body.comanda_numero || null,
+      cliente_telefono: body.cliente_telefono || null,
+      vencimiento: body.vencimiento || body.fecha_vencimiento || null,
+      fecha_creacion: body.fecha_creacion || new Date().toISOString()
+    };
+
+    console.log('[CuentasPorCobrar] Creando cuenta:', JSON.stringify(insertData));
+
+    const { data, error } = await supabase
+      .from('CuentaPorCobrar')
+      .insert(insertData)
+      .select()
+      .single();
+    if (error) throw error;
+    
+    // Normalize for frontend
+    const normalized = {
+      ...data,
+      cliente_nombre: data.clienteNombre,
+      empleado_id: data.empleadoId,
+      fecha_vencimiento: data.vencimiento
+    };
+    
+    res.json(normalized);
+  } catch (e) {
+    console.error('[CuentasPorCobrar] Error creando:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.put('/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -37,6 +79,20 @@ router.put('/:id', requireAdmin, async (req, res) => {
       .single();
     if (error) throw error;
     res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.delete('/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('CuentaPorCobrar')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

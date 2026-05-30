@@ -114,6 +114,7 @@ router.post('/pagar', requireAdmin, async (req, res) => {
       periodo_inicio,
       periodo_fin,
       notas,
+      pagos_mixtos = [],
     } = req.body;
 
     // Validaciones
@@ -244,26 +245,50 @@ router.post('/pagar', requireAdmin, async (req, res) => {
     }
 
     // 3. Integración con Arqueo de Caja: Registrar pago como EGRESO (para todos los métodos de pago)
-    const montoEgresoUSD = salario_neto ?? 0;
+    if (metodo_pago === 'mixto' && pagos_mixtos && pagos_mixtos.length > 0) {
+      for (const p of pagos_mixtos) {
+        const montoGastoUSD = p.monto_usd;
+        let montoOriginal = montoGastoUSD;
+        if (p.moneda === 'ves') {
+          montoOriginal = p.monto_ves || (montoGastoUSD * p.tasa_cambio_aplicada);
+        } else if (p.moneda === 'cop') {
+          montoOriginal = p.monto_cop || (montoGastoUSD * p.tasa_cambio_aplicada);
+        }
 
-    const { error: gastoError } = await supabase
-      .from('Gasto')
-      .insert({
-        id: crypto.randomUUID(),
-        descripcion: `Nómina: ${empleado_nombre ?? 'Empleado'} (${periodo_inicio ?? 'N/A'} - ${periodo_fin ?? 'N/A'})`,
-        monto: montoEgresoUSD,
-        monto_original: monto_convertido ?? montoEgresoUSD,
-        moneda_original: moneda_pago ?? 'USD',
-        metodo_pago: metodo_pago,
-        categoriaNombre: 'Nómina',
-        fecha: now,
-      });
-      
-    if (gastoError) {
-      console.error('Error registrando egreso en caja:', gastoError);
-      // No bloquear el pago por esto, pero logueamos
+        await supabase.from('Gasto').insert({
+          id: crypto.randomUUID(),
+          descripcion: `Nómina Mixto: ${empleado_nombre ?? 'Empleado'} (${p.metodo_pago})`,
+          monto: montoGastoUSD,
+          monto_original: montoOriginal,
+          moneda_original: p.moneda.toUpperCase(),
+          metodo_pago: p.metodo_pago,
+          categoriaNombre: 'Nómina',
+          fecha: now,
+        });
+      }
+      console.log(`✅ Egreso de nómina registrado en caja (Mixto) para: ${empleado_nombre}`);
     } else {
-      console.log(`✅ Egreso de nómina registrado en caja: $${montoEgresoUSD} USD via ${metodo_pago}`);
+      const montoEgresoUSD = salario_neto ?? 0;
+
+      const { error: gastoError } = await supabase
+        .from('Gasto')
+        .insert({
+          id: crypto.randomUUID(),
+          descripcion: `Nómina: ${empleado_nombre ?? 'Empleado'} (${periodo_inicio ?? 'N/A'} - ${periodo_fin ?? 'N/A'})`,
+          monto: montoEgresoUSD,
+          monto_original: monto_convertido ?? montoEgresoUSD,
+          moneda_original: moneda_pago ?? 'USD',
+          metodo_pago: metodo_pago,
+          categoriaNombre: 'Nómina',
+          fecha: now,
+        });
+        
+      if (gastoError) {
+        console.error('Error registrando egreso en caja:', gastoError);
+        // No bloquear el pago por esto, pero logueamos
+      } else {
+        console.log(`✅ Egreso de nómina registrado en caja: $${montoEgresoUSD} USD via ${metodo_pago}`);
+      }
     }
 
     res.json({

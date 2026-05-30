@@ -8,8 +8,10 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import ModalPagoMixto from "../comandas/ModalPagoMixto";
 
 const METODOS_PAGO = [
+  { value: 'mixto', label: 'Pago Mixto', icon: '🔀', moneda: 'USD' },
   { value: 'efectivo_usd', label: 'Efectivo USD', icon: '💵', moneda: 'USD' },
   { value: 'zelle_usd', label: 'Zelle', icon: '🔷', moneda: 'USD' },
   { value: 'binance_usd', label: 'Binance / USDT', icon: '🟡', moneda: 'USD' },
@@ -33,6 +35,7 @@ export default function ModalPagarNomina({ open, onClose, previewData, onConfirm
   const [periodoInicio, setPeriodoInicio] = useState('');
   const [periodoFin, setPeriodoFin] = useState('');
   const [notas, setNotas] = useState('');
+  const [mostrarPagoMixto, setMostrarPagoMixto] = useState(false);
 
   const { empleado, adelantos = [], cuentas = [], tasa } = previewData ?? {};
 
@@ -83,7 +86,7 @@ export default function ModalPagarNomina({ open, onClose, previewData, onConfirm
     return { monto: neto, tasa: 1 };
   }, [salarioNetoDinamico, monedaPago, tasa]);
 
-  const handleConfirmar = () => {
+  const ejecutarConfirmar = (distribucion = null) => {
     onConfirmar({
       empleado_id: empleado?.id,
       empleado_nombre: empleado?.nombre,
@@ -108,7 +111,17 @@ export default function ModalPagarNomina({ open, onClose, previewData, onConfirm
       periodo_inicio: periodoInicio || null,
       periodo_fin: periodoFin || null,
       notas: notas || null,
+      pagos_mixtos: distribucion,
     });
+    setMostrarPagoMixto(false);
+  };
+
+  const handleConfirmar = () => {
+    if (metodoPago === 'mixto') {
+      setMostrarPagoMixto(true);
+      return;
+    }
+    ejecutarConfirmar();
   };
 
   const monedaInfo = MONEDAS[monedaPago] ?? MONEDAS.USD;
@@ -400,6 +413,16 @@ export default function ModalPagarNomina({ open, onClose, previewData, onConfirm
           </Button>
         </div>
       </DialogContent>
+      
+      {/* Modal Pago Mixto */}
+      <ModalPagoMixto
+        isOpen={mostrarPagoMixto}
+        onClose={() => setMostrarPagoMixto(false)}
+        totalUSD={salarioNetoDinamico}
+        tasaBs={tasa?.tasa_bs_usd}
+        onConfirm={ejecutarConfirmar}
+        isLoading={isPaying}
+      />
     </Dialog>
   );
 }
